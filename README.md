@@ -141,19 +141,25 @@ $env:TTA_ENV = "staging"; npx playwright test
 
 ## Running Tests
 
-`package.json` currently defines no npm scripts; invoke Playwright through `npx`.
+| Task | npm script | Direct command |
+| --- | --- | --- |
+| Run all tests | `npm test` | `npx playwright test` |
+| Headed mode | `npm run test:headed` | `npx playwright test --headed` |
+| UI mode | `npm run test:ui` | `npx playwright test --ui` |
+| Debug (inspector) | `npm run test:debug` | `npx playwright test --debug` |
+| Run with Allure reporter | `npm run test:allure` | `npx playwright test --reporter=list,allure-playwright` |
+| Open last HTML report | `npm run report` | `npx playwright show-report` |
+| Codegen (record) | `npm run codegen -- https://example.com` | `npx playwright codegen https://example.com` |
+| Type-check only | `npm run typecheck` | `npx tsc --noEmit` |
+| Install browsers | `npm run install:browsers` | `npx playwright install --with-deps` |
 
-| Task | Command |
-| --- | --- |
-| Run all tests | `npx playwright test` |
-| Run a single spec | `npx playwright test src/tests/example.spec.ts` |
-| Run tests by title | `npx playwright test -g "has title"` |
-| Headed mode | `npx playwright test --headed` |
-| Debug (inspector) | `npx playwright test --debug` |
-| UI mode | `npx playwright test --ui` |
-| Codegen (record) | `npx playwright codegen https://example.com` |
-| Open last HTML report | `npx playwright show-report` |
-| Type-check only | `npx tsc --noEmit` |
+Pass extra Playwright arguments after `--`:
+
+```bash
+npm test -- src/tests/example.spec.ts     # single spec
+npm test -- -g "has title"                # filter by test title
+npm test -- --workers=1                   # force serial execution
+```
 
 ---
 
@@ -167,7 +173,16 @@ $env:TTA_ENV = "staging"; npx playwright test
 
 Raw artifacts land in `test-results/`. Both `test-results/` and `playwright-report/` are git-ignored.
 
-`allure-playwright` is installed for Allure reporting; enable it by adding `['allure-playwright']` to the `reporter` array in [playwright.config.ts](playwright.config.ts).
+### Allure
+
+`npm run test:allure` runs the suite with the `allure-playwright` reporter and writes raw results to `allure-results/`. Rendering them into a browsable report needs the **Allure CLI**, which is not a project dependency — install it separately:
+
+```bash
+npm i -g allure-commandline
+allure serve allure-results
+```
+
+To make Allure the default, add `['allure-playwright']` to the `reporter` array in [playwright.config.ts](playwright.config.ts). Both `allure-results/` and `allure-report/` are git-ignored.
 
 ---
 
