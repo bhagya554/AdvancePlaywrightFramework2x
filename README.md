@@ -37,6 +37,7 @@ A TypeScript-based UI and API test automation framework built on [Playwright Tes
 | Excel test data | `xlsx` | ^0.18.5 |
 | Logging | `winston` | ^3.19.0 |
 | Env config | `dotenv` | ^17.4.2 |
+| Cross-platform env vars | `cross-env` | ^10.1.0 |
 
 All dependencies are declared as `devDependencies` — this is a test-only project with no runtime shipping artifact.
 
@@ -127,7 +128,23 @@ Supported variables:
 2. Otherwise `TTA_ENV` (lower-cased, defaulting to `qa`) selects the matching `*_BASE_URL` variable.
 3. Otherwise the hard-coded default for that environment is used.
 
-Example — run the suite against staging:
+> **Important:** because `BASE_URL` short-circuits the whole function, a `BASE_URL` line in your `.env` pins every run to that one host and makes `TTA_ENV` a no-op. Leave `BASE_URL` blank in `.env` unless you deliberately want that pin.
+
+### Switching environments
+
+Use the per-environment npm scripts — they work identically on Windows, macOS, and Linux via `cross-env`:
+
+```bash
+npm run test:qa      # TTA_ENV=qa
+npm run test:dev     # TTA_ENV=dev
+npm run test:stg     # TTA_ENV=stg
+npm run test:prod    # TTA_ENV=prod
+npm run test:api     # TTA_ENV=api
+```
+
+Each script blanks `BASE_URL` first (`cross-env BASE_URL= TTA_ENV=... playwright test`) so the `.env` pin cannot override the environment you asked for. An empty string is falsy, so `resolveBaseURL()` skips the override branch; `dotenv` will not refill an already-present key.
+
+Setting it by hand instead is shell-specific:
 
 ```bash
 # macOS / Linux
@@ -148,6 +165,7 @@ $env:TTA_ENV = "staging"; npx playwright test
 | UI mode | `npm run test:ui` | `npx playwright test --ui` |
 | Debug (inspector) | `npm run test:debug` | `npx playwright test --debug` |
 | Run with Allure reporter | `npm run test:allure` | `npx playwright test --reporter=list,allure-playwright` |
+| Run against QA / dev / stg / prod / api | `npm run test:qa` (also `:dev`, `:stg`, `:prod`, `:api`) | `npx cross-env BASE_URL= TTA_ENV=qa playwright test` |
 | Open last HTML report | `npm run report` | `npx playwright show-report` |
 | Codegen (record) | `npm run codegen -- https://example.com` | `npx playwright codegen https://example.com` |
 | Type-check only | `npm run typecheck` | `npx tsc --noEmit` |
@@ -272,7 +290,7 @@ test('get started link', async ({ page }) => {
 | Symptom | Fix |
 | --- | --- |
 | `browserType.launch: Executable doesn't exist` | Run `npx playwright install` |
-| Tests hit the wrong host | Check `BASE_URL` / `TTA_ENV` — `BASE_URL` overrides everything |
+| Tests hit the wrong host | `BASE_URL` in `.env` overrides `TTA_ENV`. Blank it, or use `npm run test:stg` (etc.), which blanks it for you |
 | `.env` values ignored | Confirm `.env` sits in the project root; it is loaded by `dotenv.config()` in `playwright.config.ts` |
 | `npm ci` fails in CI | Regenerate and commit `package-lock.json` (`npm install`) |
 | Flaky selectors | Switch to role/label/test-id locators and web-first assertions |
