@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(npm i *)",
+      "Bash(npm ls *)",
+      "Bash(grep -c \"^\\\\.env$\")"
+    ]
+  }
+}
