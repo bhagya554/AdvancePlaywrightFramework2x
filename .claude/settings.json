@@ -18,7 +18,9 @@
       "PowerShell(npx playwright test --list 2>&1)",
       "PowerShell(node -e \"const {DataGenerator}=require\\('./src/utils/DataGenerator.ts'\\); console.log\\(DataGenerator.credentials\\(\\)\\); console.log\\(DataGenerator.password\\(6\\)\\);\")",
       "PowerShell(npm run typecheck)",
-      "PowerShell(git add -A)"
+      "PowerShell(git add -A)",
+      "PowerShell(git push origin main)",
+      "PowerShell(npx playwright test src/tests/Login.spec.ts --reporter=line 2>&1)"
     ]
   }
 }

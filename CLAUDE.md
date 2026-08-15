@@ -39,8 +39,8 @@ Adding a new environment means touching three places: the `switch` in `resolveBa
 - `testDir: ./src/tests` — specs outside that tree are invisible to the runner.
 - Single `chromium` project. Cross-browser needs new entries in `projects`.
 - `fullyParallel: true`, `retries: 2` on CI only. `forbidOnly` and the CI `workers: 1` override are **commented out** in the config — a stray `test.only` will not fail CI as-is.
-- `video: 'on'` (every test, not just failures) — `test-results/` grows fast locally.
-- `trace: 'on-first-retry'`, so traces never appear locally where `retries: 0`. Use `--trace on` when debugging.
+- `video: 'on'` and `trace: 'on'` (every test, not just failures/retries), `screenshot: 'only-on-failure'` — `test-results/` and `tta-report/` grow fast locally.
+- Reporters: `html`, `list`, and `./src/utils/CustomReporter.ts` (writes `tta-report/`, git-ignored).
 - Timeouts: test `60_000`, expect `10_000`.
 - `@src/*` → `./src/*` path alias is declared in [tsconfig.json](tsconfig.json); Playwright resolves tsconfig paths natively, so it works at runtime as well as typecheck.
 - Allure: `npm run test:allure` writes `allure-results/`, but `allure-commandline` is **not** a project dependency — rendering needs a separate global install.

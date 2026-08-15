@@ -68,11 +68,12 @@ AdvancedFramework_2x/
 │   │   └── CheckoutCompletePage.ts # (placeholder)
 │   ├── testdata/               # JSON / CSV / XLSX test data
 │   ├── tests/                  # Spec files (testDir)
+│   │   └── Login.spec.ts           # TTACart login suite
 │   └── utils/
 │       ├── UtilElementLocators.ts  # Logged wrappers over Playwright actions
 │       ├── logger.ts               # Winston root + scoped child loggers
 │       ├── DataGenerator.ts        # Faker-backed test data
-│       └── CustomReporter.ts       # Custom live HTML reporter (opt-in)
+│       └── CustomReporter.ts       # Custom live HTML reporter (registered in config)
 ├── logs/                       # combined.log from Winston (git-ignored)
 ├── .env                        # Local secrets (git-ignored)
 ├── .env.example                # Template for .env
@@ -82,7 +83,7 @@ AdvancedFramework_2x/
 └── tsconfig.json
 ```
 
-Empty folders are tracked with `.gitkeep` so the layout survives a fresh clone. The page objects marked *(placeholder)* exist as empty files and are still to be implemented; `src/tests/` currently holds no specs, so `npx playwright test` reports zero tests until you add one.
+Empty folders are tracked with `.gitkeep` so the layout survives a fresh clone. The page objects marked *(placeholder)* exist as empty files and are still to be implemented. `LoginPage` is the first implemented page object, exercised by [src/tests/Login.spec.ts](src/tests/Login.spec.ts).
 
 ---
 
@@ -116,6 +117,18 @@ export class LoginPage extends BasePage {
 }
 ```
 
+### `LoginPage` — [src/pages/LoginPage.ts](src/pages/LoginPage.ts)
+
+The first implemented page object. It holds `data-test`-based locators for the username field, password field, login button, error box and the credentials hint, and exposes three methods:
+
+| Method | Behaviour |
+| --- | --- |
+| `open()` | `goto(LoginPage.PATH)` — `PATH` is the static `/playwright/ttacart/index.html` |
+| `loginAs(username, password)` | Fills both fields and clicks login, each step logged |
+| `getLoginButtonLocator()` | Returns the login button `Locator` so specs can assert on it |
+
+Following the convention, it contains no assertions — `getLoginButtonLocator()` exists so the spec can own them.
+
 ### `UtilElementLocator` — [src/utils/UtilElementLocators.ts](src/utils/UtilElementLocators.ts)
 
 Thin, logged wrappers over the Playwright element API. Every method accepts a `Flex` target — either a CSS string or an already-built `Locator` — and defaults to a `15_000` ms action timeout (`DEFAULT_ACTION_TIMEOUT_MS`).
@@ -128,6 +141,7 @@ Thin, logged wrappers over the Playwright element API. Every method accepts a `F
 | State | `isVisible`, `isEnabled`, `isChecked` |
 | Waits | `waitForVisible`, `waitForHidden`, `waitForPageLoad` |
 | Select | `selectByText`, `selectByIndex`, `selectByValue` |
+| Access | `getLocator` — resolves a `Flex` target to a raw `Locator` for assertions in specs |
 
 `type()` is kept as a public name for familiarity but delegates to `pressSequentially()`, since Playwright deprecated `.type()`. `waitForPageLoad()` waits for `domcontentloaded`, then attempts `networkidle` and swallows the timeout.
 
@@ -169,7 +183,7 @@ A self-contained Playwright reporter (`CustomTTAReporter`) that writes a live, s
 
 It also prints a boxed console summary, groups tests by file and `describe` path, associates console logs and screenshots with individual `test.step()` calls, and records video offsets per step. `TEST_ENV` and `TEST_AUTHOR` populate the report's environment and author columns.
 
-It is **not registered by default**. To use it, add it to the `reporter` array in [playwright.config.ts](playwright.config.ts):
+It is **registered by default** in [playwright.config.ts](playwright.config.ts), alongside the built-in reporters:
 
 ```ts
 reporter: [
@@ -178,6 +192,8 @@ reporter: [
   ['./src/utils/CustomReporter.ts'],
 ],
 ```
+
+Remove that third entry to turn it off.
 
 ---
 
@@ -285,10 +301,18 @@ $env:TTA_ENV = "staging"; npx playwright test
 Pass extra Playwright arguments after `--`:
 
 ```bash
-npm test -- src/tests/example.spec.ts     # single spec
-npm test -- -g "has title"                # filter by test title
+npm test -- src/tests/Login.spec.ts       # single spec
+npm test -- -g "@p0"                      # filter by test title / tag
 npm test -- --workers=1                   # force serial execution
 ```
+
+### Current suites
+
+| Spec | Covers |
+| --- | --- |
+| [src/tests/Login.spec.ts](src/tests/Login.spec.ts) | `TTACart - Login` — opens the login page in `beforeEach`, logs in as `standard_user`, asserts the login button is hidden afterwards. Tagged `@p0` |
+
+Tests are structured with `test.step()` so the custom report and traces show each phase separately, and each spec creates its own scoped logger via `createLogger('<spec name>')`.
 
 ---
 
@@ -298,7 +322,7 @@ npm test -- --workers=1                   # force serial execution
 - **List reporter** — live per-test output in the terminal.
 - **Screenshots** — captured `only-on-failure`.
 - **Video** — recorded `on` (every test).
-- **Trace** — captured `on-first-retry`; view with `npx playwright show-trace <trace.zip>`.
+- **Trace** — captured `on` (every test); view with `npx playwright show-trace <trace.zip>`.
 
 - **Logs** — `logs/combined.log`, written by Winston on every run.
 
@@ -306,7 +330,7 @@ Raw artifacts land in `test-results/`. `test-results/`, `playwright-report/`, `t
 
 ### Custom TTA report
 
-Registering [src/utils/CustomReporter.ts](src/utils/CustomReporter.ts) in the `reporter` array (see [Framework Building Blocks](#framework-building-blocks)) adds a live HTML report under `tta-report/`, refreshed every 5 seconds while the run is in progress. Open `tta-report/index.html` for the latest run or `tta-report/history.html` for previous ones.
+[src/utils/CustomReporter.ts](src/utils/CustomReporter.ts) is in the `reporter` array, so every run writes a live HTML report under `tta-report/`, refreshed every 5 seconds while the run is in progress. Open `tta-report/index.html` for the latest run or `tta-report/history.html` for previous ones. Videos and traces are copied in for each test; screenshots appear only for failures.
 
 ### Allure
 
@@ -336,7 +360,7 @@ Key settings in [playwright.config.ts](playwright.config.ts):
 | `use.baseURL` | `resolveBaseURL()` | See resolution order above |
 | `use.screenshot` | `only-on-failure` | |
 | `use.video` | `on` | |
-| `use.trace` | `on-first-retry` | |
+| `use.trace` | `on` | Every test, not just retries |
 | `projects` | `chromium` (Desktop Chrome) | Add Firefox/WebKit projects as needed |
 
 `forbidOnly` and the CI `workers` override are present but commented out — uncomment them to fail CI on a stray `test.only` and to force serial execution.
@@ -380,20 +404,32 @@ Secrets used by tests should be added as GitHub repository secrets and mapped to
 3. Put static data in `src/testdata/` (JSON/CSV/XLSX) or generate it with `DataGenerator`.
 4. Create the spec in `src/tests/` as `<feature>.spec.ts`.
 5. Navigate through the page object's own `goto()`/`open()` so `baseURL` stays environment-driven.
+6. Wrap each phase in `test.step()` and log through a scoped `createLogger()` — both show up in the custom report.
 
 ```ts
 import { test, expect } from '@playwright/test';
 import { LoginPage } from '@src/pages/LoginPage';
 import { DataGenerator } from '@src/utils/DataGenerator';
+import { createLogger } from '@src/utils/logger';
+
+const log = createLogger('Login.spec');
 
 test('rejects unknown credentials', async ({ page }) => {
   const login = new LoginPage(page);
-  await login.open();
 
-  const { username, password } = DataGenerator.credentials();
-  await login.loginAs(username, password);
+  await test.step('Open the TTACart login page', async () => {
+    await login.open();
+  });
 
-  await expect(page.locator('[data-test="error"]')).toBeVisible();
+  await test.step('Submit generated credentials', async () => {
+    const { username, password } = DataGenerator.credentials();
+    log.info(`Logging in as ${username}`);
+    await login.loginAs(username, password);
+  });
+
+  await test.step('Verify the login button is still shown', async () => {
+    await expect(login.getLoginButtonLocator()).toBeVisible();
+  });
 });
 ```
 
@@ -423,8 +459,8 @@ Imports use the `@src/*` alias; Playwright resolves the tsconfig paths at run ti
 | Flaky selectors | Switch to role/label/test-id locators and web-first assertions |
 | Report not opening | Run `npx playwright show-report` from the project root |
 | `ERR_REQUIRE_ESM` from `@faker-js/faker` | Node is older than 22.12 — upgrade Node |
-| `No tests found` | `src/tests/` is empty; specs outside `testDir` are invisible to the runner |
-| No `tta-report/` produced | `CustomReporter.ts` is opt-in — add it to the `reporter` array in `playwright.config.ts` |
+| `No tests found` | Specs outside `testDir` (`src/tests/`) are invisible to the runner; check the file ends with `.spec.ts` |
+| No `tta-report/` produced | Check `CustomReporter.ts` is still in the `reporter` array in `playwright.config.ts` |
 | Logs missing | Raise the level with `LOG_LEVEL=debug`; file output goes to `logs/combined.log` |
 
 ---

@@ -1,5 +1,5 @@
-import {Locator,Page} from '@playwright/test' 
-import {BasePage} from './BasePage'
+import { Locator, Page } from '@playwright/test'
+import { BasePage } from './BasePage'
 
 /**
  * TTACart login screen.
@@ -10,36 +10,41 @@ import {BasePage} from './BasePage'
  */
 
 
-export class LoginPage extends BasePage{
+export class LoginPage extends BasePage {
     static readonly PATH = '/playwright/ttacart/index.html';
 
-    private readonly usernameInput:Locator;
-    private readonly passwordInput:Locator;
-    private readonly loginButton:Locator;
-    private readonly errorBox:Locator;
-    private readonly loginCredentialsHint:Locator;
-    
+    private readonly usernameInput: Locator;
+    private readonly passwordInput: Locator;
+    private readonly loginButton: Locator;
+    private readonly errorBox: Locator;
+    private readonly loginCredentialsHint: Locator;
 
-    constructor(page:Page){
-        super(page,"LoginPage")
-        this.usernameInput=page.locator("[data-test='username']")
-        this.passwordInput=page.locator("[data-test='password']")
+
+    constructor(page: Page) {
+        super(page, "LoginPage")
+        this.usernameInput = page.locator("[data-test='username']")
+        this.passwordInput = page.locator("[data-test='password']")
         this.loginButton = page.locator('[data-test="login-button"]');
         this.errorBox = page.locator('[data-test="error"]');
         this.loginCredentialsHint = page.locator('[data-test="login-credentials"]');
     }
 
-    async open():Promise<void>{
+    async open(): Promise<void> {
         this.log.info("Open Login Page")
-        this.goto(LoginPage.PATH)
+        await this.goto(LoginPage.PATH)
     }
 
-    async loginAs(username:string,password:string){
+    async loginAs(username: string, password: string) {
         this.log.info(`Login As: ${username}`)
-        await this.el.fill(this.usernameInput,username);
-        await this.el.fill(this.passwordInput,password);
+        await this.el.fill(this.usernameInput, username);
+        await this.el.fill(this.passwordInput, password);
         await this.el.click(this.loginButton)
 
+    }
+
+    getLoginButtonLocator(): Locator {
+        this.log.info('Getting Login button Locator')
+        return this.el.getLocator(this.loginButton)
     }
 
 

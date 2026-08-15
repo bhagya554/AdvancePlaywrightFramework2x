@@ -211,4 +211,10 @@ export class UtilElementLocator {
         await loc.selectOption({value});
     }
 
+
+    getLocator(target:Flex):Locator{
+        const loc=this.toLocator(target);
+        this.log.debug(`Fetching the locator ${this.describe(target)}`)
+        return loc;
+    }
 }
