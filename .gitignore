@@ -15,3 +15,9 @@ node_modules/
 # Allure
 /allure-results/
 /allure-report/
+
+# Custom TTA reporter output
+/tta-report/
+
+# Logs
+/logs/

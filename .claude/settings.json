@@ -5,7 +5,20 @@
       "Bash(echo \"exit=$?\")",
       "Bash(npm i *)",
       "Bash(npm ls *)",
-      "Bash(grep -c \"^\\\\.env$\")"
+      "Bash(grep -c \"^\\\\.env$\")",
+      "Bash(git commit *)",
+      "Bash(git ls-remote *)",
+      "Bash(npm run *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\(Object.keys\\(p.scripts\\).join\\(', '\\)\\)\")",
+      "Bash(npm audit *)",
+      "Bash(npx cross-env *)",
+      "PowerShell(npx tsc --noEmit 2>&1)",
+      "PowerShell(node -v)",
+      "PowerShell(node -e \"const {faker}=require\\('@faker-js/faker'\\); console.log\\('require\\(esm\\) OK:', faker.internet.username\\(\\)\\)\")",
+      "PowerShell(npx playwright test --list 2>&1)",
+      "PowerShell(node -e \"const {DataGenerator}=require\\('./src/utils/DataGenerator.ts'\\); console.log\\(DataGenerator.credentials\\(\\)\\); console.log\\(DataGenerator.password\\(6\\)\\);\")",
+      "PowerShell(npm run typecheck)",
+      "PowerShell(git add -A)"
     ]
   }
 }
