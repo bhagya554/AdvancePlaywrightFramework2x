@@ -21,3 +21,8 @@ node_modules/
 
 # Logs
 /logs/
+
+# Scratch / throwaway files
+/tmp/*
+# except the team explainer, which is shared on purpose
+!/tmp/eli5-dotenv.html

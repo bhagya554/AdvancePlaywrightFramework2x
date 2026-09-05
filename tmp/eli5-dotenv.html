@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ELI5: .env in our framework</title>
+<style>
+  :root{
+    --bg:#fbf8f3; --ink:#241f1a; --muted:#6b6157;
+    --card:#ffffff; --line:#e6ddd0;
+    --pop:#e2643a; --pop2:#2f7d6d; --warn:#c9a227;
+    --shadow:0 2px 0 #e6ddd0, 0 12px 30px rgba(60,45,25,.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#17151a; --ink:#f2ece4; --muted:#a89e93;
+      --card:#211e25; --line:#332e39;
+      --pop:#ff8a5c; --pop2:#5fc0aa; --warn:#e6c04a;
+      --shadow:0 2px 0 #332e39, 0 12px 30px rgba(0,0,0,.35);
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:16px/1.55 ui-rounded,"Segoe UI",system-ui,-apple-system,sans-serif;
+    padding:32px 20px 80px;
+  }
+  .wrap{max-width:900px;margin:0 auto}
+  header{text-align:center;margin-bottom:40px}
+  h1{font-size:clamp(30px,6vw,52px);line-height:1.05;margin:0 0 10px;letter-spacing:-.02em}
+  h1 span{color:var(--pop)}
+  .sub{color:var(--muted);font-size:18px;margin:0}
+  section{
+    background:var(--card); border:2px solid var(--line); border-radius:20px;
+    padding:26px 24px; margin:0 0 22px; box-shadow:var(--shadow);
+  }
+  h2{font-size:clamp(20px,3.5vw,28px);margin:0 0 6px;display:flex;gap:12px;align-items:center}
+  .n{
+    flex:0 0 auto;width:38px;height:38px;border-radius:50%;
+    background:var(--pop);color:#fff;display:grid;place-items:center;
+    font-size:19px;font-weight:700;
+  }
+  .say{font-size:19px;color:var(--muted);margin:0 0 18px 50px}
+  .big{font-size:56px;line-height:1;text-align:center;margin:10px 0}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;margin:18px 0}
+  .box{
+    background:var(--bg);border:2px solid var(--line);border-radius:14px;
+    padding:12px 16px;text-align:center;min-width:120px;
+  }
+  .box b{display:block;font-size:15px}
+  .box small{color:var(--muted)}
+  .box .ico{font-size:30px;display:block;margin-bottom:4px}
+  .arrow{font-size:26px;color:var(--pop)}
+  code{
+    font-family:"Cascadia Code",ui-monospace,Consolas,monospace;
+    background:var(--bg);border:1px solid var(--line);border-radius:6px;
+    padding:1px 6px;font-size:.92em;
+  }
+  pre{
+    background:var(--bg);border:2px solid var(--line);border-radius:14px;
+    padding:14px 16px;overflow-x:auto;margin:14px 0 0;
+    font-family:"Cascadia Code",ui-monospace,Consolas,monospace;font-size:14px;
+  }
+  .ladder{list-style:none;padding:0;margin:16px 0 0;counter-reset:step}
+  .ladder li{
+    display:flex;gap:14px;align-items:center;
+    background:var(--bg);border:2px solid var(--line);border-radius:14px;
+    padding:12px 16px;margin-bottom:10px;
+  }
+  .ladder li .k{font-size:26px}
+  .ladder li b{font-family:"Cascadia Code",ui-monospace,Consolas,monospace}
+  .rule{
+    border-left:6px solid var(--warn);background:var(--bg);
+    border-radius:0 14px 14px 0;padding:14px 18px;margin-top:16px;
+  }
+  .rule b{color:var(--warn)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+  @media(max-width:620px){.grid2{grid-template-columns:1fr} .say{margin-left:0}}
+  .yes,.no{border:2px solid var(--line);border-radius:14px;padding:14px 16px;background:var(--bg)}
+  .yes{border-color:var(--pop2)} .no{border-color:var(--pop)}
+  .yes h3,.no h3{margin:0 0 6px;font-size:16px}
+  .yes h3{color:var(--pop2)} .no h3{color:var(--pop)}
+  footer{text-align:center;color:var(--muted);font-size:14px;margin-top:34px}
+
+  /* ---- hand-drawn whiteboard ---- */
+  .board .n{background:transparent;font-size:26px}
+  .scroller{overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch}
+  .scroller svg{display:block;min-width:1020px;height:auto}
+  .hint{color:var(--muted);font-size:13px;text-align:center;margin:4px 0 0}
+  .node rect{stroke:var(--ink);stroke-width:2.2}
+  .f-blue {fill:#cfe3f5}
+  .f-green{fill:#cfeadd}
+  .f-amber{fill:#fbe3c8}
+  .f-note {fill:#fff6c2; stroke-dasharray:7 5}
+  @media (prefers-color-scheme: dark){
+    .f-blue {fill:#2b3f52}
+    .f-green{fill:#28453d}
+    .f-amber{fill:#4a3a29}
+    .f-note {fill:#4a4326}
+  }
+  .wire{fill:none;stroke:var(--ink);stroke-width:2.2}
+  .t-title{fill:var(--ink);font-size:19px;font-weight:700;text-anchor:middle}
+  .t-sub  {fill:var(--ink);font-size:13px;text-anchor:middle;opacity:.85}
+  .t-mono {fill:var(--ink);font-size:13px;text-anchor:middle;opacity:.9;
+           font-family:"Cascadia Code",ui-monospace,Consolas,monospace}
+  .t-note {fill:var(--ink);font-size:13.5px}
+  .t-note-mono{fill:var(--ink);font-size:13px;
+           font-family:"Cascadia Code",ui-monospace,Consolas,monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="big">🗒️ ➜ 🤖 ➜ ✅</div>
+  <h1>How our tests get their <span>secrets</span></h1>
+  <p class="sub">The <code>.env</code> story, in small words.</p>
+</header>
+
+<section>
+  <h2><span class="n">1</span> A notebook nobody shares</h2>
+  <p class="say">One file, <code>.env</code>, sits in the project folder. It holds the boring-but-private stuff: which website to visit, which user to log in as.</p>
+  <div class="flow">
+    <div class="box"><span class="ico">🗒️</span><b>.env</b><small>real values — hidden</small></div>
+    <span class="arrow">↔</span>
+    <div class="box"><span class="ico">📋</span><b>.env.example</b><small>same key names, fake values — shared</small></div>
+  </div>
+  <div class="rule"><b>Rule.</b> <code>.env</code> is in <code>.gitignore</code>. The example file is the map; the real file is the treasure. Never commit the treasure.</div>
+</section>
+
+<section>
+  <h2><span class="n">2</span> Somebody reads it out loud — once</h2>
+  <p class="say">At the very top of the config, one line reads the notebook and pours every key into the computer's memory. That happens <em>before</em> any test starts, so every test already knows everything.</p>
+<pre>// playwright.config.ts (line 4)
+import dotenv from 'dotenv'
+dotenv.config();</pre>
+  <div class="flow">
+    <div class="box"><span class="ico">🗒️</span><b>.env</b></div>
+    <span class="arrow">→</span>
+    <div class="box"><span class="ico">📣</span><b>dotenv.config()</b><small>runs once, in the config</small></div>
+    <span class="arrow">→</span>
+    <div class="box"><span class="ico">🧠</span><b>process.env</b><small>everyone can read</small></div>
+    <span class="arrow">→</span>
+    <div class="box"><span class="ico">🧪</span><b>tests</b></div>
+  </div>
+  <div class="rule"><b>Do not</b> call <code>dotenv.config()</code> again inside a spec. dotenv never overwrites a key that already exists, so the second shout does nothing.</div>
+</section>
+
+<section>
+  <h2><span class="n">3</span> Little helpers do the reading</h2>
+  <p class="say">Tests don't poke at <code>process.env</code> themselves. Four tiny functions in <code>src/config/env.ts</code> do it politely.</p>
+  <ul class="ladder">
+    <li><span class="k">🎁</span><div><b>env('KEY', 'backup')</b><br><small>Value, or the backup when it's missing.</small></div></li>
+    <li><span class="k">🚨</span><div><b>requireEnv('API_TOKEN')</b><br><small>No value? Throw right away, with a helpful message.</small></div></li>
+    <li><span class="k">🔘</span><div><b>envFlag('ATTACH_SCREENSHOTS')</b><br><small><code>true</code>/<code>1</code>/<code>yes</code> means on. Anything else, off.</small></div></li>
+    <li><span class="k">🔢</span><div><b>envNumber('KEY', 5)</b><br><small>A number, or the backup if it's gibberish.</small></div></li>
+  </ul>
+<pre>import { env } from '@config/env';
+const FIRST_ITEM_ID = env('TTA_ITEM_ID', 'test-allthethings-tshirt-red');</pre>
+</section>
+
+<section>
+  <h2><span class="n">4</span> Empty means "not there"</h2>
+  <p class="say">If a line says <code>STANDARD_USER=</code> with nothing after it, that counts as missing — so the backup is used. An empty username would be worse than none.</p>
+  <div class="grid2">
+    <div class="no"><h3>✗ plain <code>??</code></h3><small>Only catches <code>undefined</code>. A blank line sneaks through and tests log in as "".</small></div>
+    <div class="yes"><h3>✓ <code>env()</code></h3><small>Trims, then treats blank as missing. Backup kicks in.</small></div>
+  </div>
+  <div class="rule"><b>Why it matters.</b> The npm scripts run <code>cross-env BASE_URL= TTA_ENV=stg …</code>. That blank <code>BASE_URL=</code> is the whole trick — it has to read as "unset" so <code>TTA_ENV</code> can win.</div>
+</section>
+
+<section>
+  <h2><span class="n">5</span> Picking the website: a ladder</h2>
+  <p class="say">Three rungs. The first one with something on it wins.</p>
+  <ul class="ladder">
+    <li><span class="k">1️⃣</span><div><b>BASE_URL</b><br><small>Set? Done. Nothing else is even looked at.</small></div></li>
+    <li><span class="k">2️⃣</span><div><b>TTA_ENV</b> → <b>QA_ / DEV_ / STG_ / PROD_ / API_BASE_URL</b><br><small>Defaults to <code>qa</code>. Aliases: <code>local</code>, <code>staging</code>, <code>production</code>…</small></div></li>
+    <li><span class="k">3️⃣</span><div><b>hard-coded default</b><br><small>Baked into the <code>switch</code> per environment.</small></div></li>
+  </ul>
+  <div class="rule"><b>Trap.</b> A <code>BASE_URL=</code> line with a real value in <code>.env</code> pins every run to one host and makes <code>TTA_ENV</code> useless. That's why the <code>test:qa</code>/<code>test:stg</code> scripts blank it first.</div>
+</section>
+
+<section>
+  <h2><span class="n">6</span> The word we're not allowed to use</h2>
+  <p class="say">Windows already gives every program a <code>USERNAME</code>. dotenv won't overwrite it. So <code>USERNAME=admin</code> in <code>.env</code> is thrown away — quietly. No error. No warning. Tests just log in as the wrong person.</p>
+  <div class="big">🪟 🚫 🗒️</div>
+  <div class="grid2">
+    <div class="no"><h3>✗ USERNAME / PASSWORD</h3><small>Shadowed by the OS, or read by nothing.</small></div>
+    <div class="yes"><h3>✓ STANDARD_USER / TTA_SECRET</h3><small>Project-prefixed. Can't collide. Already read by <code>credentials.ts</code>.</small></div>
+  </div>
+  <div class="rule"><b>How it was caught.</b> The file had 13 keys, the runner said <code>injected env (12)</code>. Exactly one was swallowed.</div>
+</section>
+
+<section>
+  <h2><span class="n">7</span> Proving it actually works</h2>
+  <p class="say">A green test proves nothing — a test that ignores <code>.env</code> and uses its backup also goes green. So: break it on purpose.</p>
+<pre>$env:TTA_ITEM_ID="false-id"; npx playwright test src/tests/e2e/e2e-checkout-env.spec.ts
+
+waiting for locator('[data-test="add-to-cart-false-id"]')
+1 failed   ← good. The value is really being used.</pre>
+  <div class="rule"><b>And leave a note.</b> One log line per test prints what resolved:<br>
+  <code>Env: user=standard_user item=test-allthethings-tshirt-red baseURL=https://app.thetestingacademy.com</code></div>
+</section>
+
+<section class="board">
+  <h2><span class="n">🖍️</span> The whole thing on one whiteboard</h2>
+  <p class="say">For the team stand-up. Follow the arrows top to bottom.</p>
+
+  <div class="scroller">
+  <svg viewBox="0 0 1020 900" width="1020" role="img" aria-label="Hand-drawn diagram of how .env values reach the tests">
+    <defs>
+      <filter id="sketch" x="-8%" y="-8%" width="116%" height="116%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="3" seed="7" result="noise"/>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.6" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+      <marker id="tip" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+        <path d="M1 1 L11 6 L1 11" fill="none" stroke="var(--ink)" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+    </defs>
+
+    <g filter="url(#sketch)" font-family="'Comic Sans MS','Segoe Print','Bradley Hand',cursive"
+       stroke-linecap="round" stroke-linejoin="round">
+
+      <!-- ── sources ─────────────────────────────────────────── -->
+      <g class="node">
+        <rect x="40" y="30" width="290" height="86" rx="14" class="f-blue"/>
+        <text x="185" y="62" class="t-title">OS + shell vars</text>
+        <text x="185" y="86" class="t-sub">USERNAME · CI · cross-env BASE_URL=</text>
+        <text x="185" y="105" class="t-sub">already in memory before we start</text>
+      </g>
+
+      <g class="node">
+        <rect x="410" y="30" width="290" height="86" rx="14" class="f-green"/>
+        <text x="555" y="62" class="t-title">.env  (git-ignored)</text>
+        <text x="555" y="86" class="t-sub">STANDARD_USER · TTA_SECRET</text>
+        <text x="555" y="105" class="t-sub">TTA_ITEM_ID · QA_/STG_/PROD_BASE_URL</text>
+      </g>
+
+      <!-- ── dotenv ──────────────────────────────────────────── -->
+      <path d="M185 116 L185 150 L300 150 L300 178" class="wire" marker-end="url(#tip)"/>
+      <path d="M555 116 L555 150 L440 150 L440 178" class="wire" marker-end="url(#tip)"/>
+
+      <g class="node">
+        <rect x="215" y="180" width="310" height="84" rx="14" class="f-amber"/>
+        <text x="370" y="212" class="t-title">dotenv.config()</text>
+        <text x="370" y="234" class="t-sub">playwright.config.ts : 4 — runs ONCE</text>
+        <text x="370" y="253" class="t-sub">fills only keys that are not set yet</text>
+      </g>
+
+      <!-- sticky: USERNAME trap -->
+      <g class="node">
+        <rect x="580" y="176" width="400" height="92" rx="6" class="f-note"/>
+        <text x="600" y="202" class="t-note">⚠ Windows sets USERNAME for every process.</text>
+        <text x="600" y="224" class="t-note">dotenv will not overwrite it → the .env line is</text>
+        <text x="600" y="246" class="t-note">dropped in silence.  13 keys → “injected env (12)”.</text>
+        <text x="600" y="266" class="t-note">Prefix everything: STANDARD_USER, TTA_SECRET.</text>
+      </g>
+
+      <!-- ── process.env ─────────────────────────────────────── -->
+      <path d="M370 264 L370 306" class="wire" marker-end="url(#tip)"/>
+
+      <g class="node">
+        <rect x="215" y="308" width="310" height="76" rx="14" class="f-blue"/>
+        <text x="370" y="338" class="t-title">process.env</text>
+        <text x="370" y="362" class="t-sub">one bag of strings — ready before any spec loads</text>
+      </g>
+
+      <!-- ── readers ─────────────────────────────────────────── -->
+      <path d="M290 384 L290 412 L185 412 L185 448" class="wire" marker-end="url(#tip)"/>
+      <path d="M450 384 L450 412 L640 412 L640 448" class="wire" marker-end="url(#tip)"/>
+
+      <g class="node">
+        <rect x="40" y="450" width="290" height="132" rx="14" class="f-green"/>
+        <text x="185" y="480" class="t-title">src/config/env.ts</text>
+        <text x="185" y="506" class="t-mono">env(key, fallback)</text>
+        <text x="185" y="528" class="t-mono">requireEnv(key)  → throws</text>
+        <text x="185" y="550" class="t-mono">envFlag(key)     true/1/yes</text>
+        <text x="185" y="572" class="t-mono">envNumber(key, n)</text>
+      </g>
+
+      <g class="node">
+        <rect x="495" y="450" width="290" height="132" rx="14" class="f-green"/>
+        <text x="640" y="480" class="t-title">resolveBaseURL()</text>
+        <text x="640" y="508" class="t-sub">1 · BASE_URL — wins outright</text>
+        <text x="640" y="532" class="t-sub">2 · TTA_ENV → QA_/DEV_/STG_/</text>
+        <text x="640" y="552" class="t-sub">PROD_/API_BASE_URL</text>
+        <text x="640" y="574" class="t-sub">3 · hard-coded default</text>
+      </g>
+
+      <!-- sticky: blank rule -->
+      <g class="node">
+        <rect x="815" y="440" width="180" height="152" rx="6" class="f-note"/>
+        <text x="833" y="468" class="t-note">Blank == unset.</text>
+        <text x="833" y="492" class="t-note">Both sides trim</text>
+        <text x="833" y="512" class="t-note">and test truthiness,</text>
+        <text x="833" y="532" class="t-note">so</text>
+        <text x="833" y="554" class="t-note-mono">cross-env BASE_URL=</text>
+        <text x="833" y="578" class="t-note">lets TTA_ENV win.</text>
+      </g>
+
+      <!-- ── consumers ───────────────────────────────────────── -->
+      <path d="M185 582 L185 638" class="wire" marker-end="url(#tip)"/>
+      <path d="M640 582 L640 638" class="wire" marker-end="url(#tip)"/>
+
+      <g class="node">
+        <rect x="40" y="640" width="290" height="80" rx="14" class="f-amber"/>
+        <text x="185" y="670" class="t-title">credentials.ts</text>
+        <text x="185" y="694" class="t-sub">standardUser · password</text>
+        <text x="185" y="712" class="t-sub">blank → falls back, never empty</text>
+      </g>
+
+      <g class="node">
+        <rect x="495" y="640" width="290" height="80" rx="14" class="f-amber"/>
+        <text x="640" y="670" class="t-title">use.baseURL</text>
+        <text x="640" y="694" class="t-sub">every open() / page.goto()</text>
+        <text x="640" y="712" class="t-sub">POM PATH stays relative</text>
+      </g>
+
+      <!-- ── specs ───────────────────────────────────────────── -->
+      <path d="M185 720 L185 756 L370 756 L370 786" class="wire" marker-end="url(#tip)"/>
+      <path d="M640 720 L640 756 L470 756 L470 786" class="wire" marker-end="url(#tip)"/>
+
+      <g class="node">
+        <rect x="215" y="788" width="410" height="76" rx="14" class="f-blue"/>
+        <text x="420" y="818" class="t-title">specs + page objects</text>
+        <text x="420" y="842" class="t-sub">log what resolved → user / item / baseURL in the report</text>
+      </g>
+
+      <!-- sticky: prove it -->
+      <g class="node">
+        <rect x="660" y="770" width="335" height="110" rx="6" class="f-note"/>
+        <text x="678" y="798" class="t-note">Prove it with a FAILURE, not a pass:</text>
+        <text x="678" y="822" class="t-note-mono">$env:TTA_ITEM_ID="false-id"</text>
+        <text x="678" y="846" class="t-note">must break on add-to-cart-false-id.</text>
+        <text x="678" y="868" class="t-note">A green run also passes on the fallback.</text>
+      </g>
+
+      <!-- pin warning, top-left corner -->
+      <g class="node">
+        <rect x="750" y="24" width="245" height="100" rx="6" class="f-note"/>
+        <text x="768" y="50" class="t-note">☠ A real BASE_URL= line in</text>
+        <text x="768" y="72" class="t-note">.env pins EVERY run to one</text>
+        <text x="768" y="94" class="t-note">host and kills TTA_ENV.</text>
+        <text x="768" y="116" class="t-note">That is why test:qa blanks it.</text>
+      </g>
+    </g>
+  </svg>
+  </div>
+  <p class="hint">↔ scroll sideways on a small screen</p>
+</section>
+
+<footer>
+  Full write-up: <code>docs/dotenv-support.md</code> · Keys: <code>.env.example</code> · Readers: <code>src/config/env.ts</code>
+</footer>
+
+</div>
+</body>
+</html>
