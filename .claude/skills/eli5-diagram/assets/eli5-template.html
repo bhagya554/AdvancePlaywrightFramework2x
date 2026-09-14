@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ELI5 — FEATURE NAME</title>
+<style>
+  /* Light is the base. Dark only redefines tokens. Never define a colour
+     for the first time inside the dark block. */
+  :root {
+    --bg: #fbfaf8;
+    --surface: #ffffff;
+    --ink: #17181c;
+    --ink-soft: #5b6068;
+    --line: #e0ddd6;
+    --accent: #1971c2;
+    --warn-bg: #fff8e6;
+    --warn-line: #f0a500;
+    --code-bg: #f2f0ec;
+    --box-1: #a5d8ff; --box-1-line: #1971c2;
+    --box-2: #b2f2bb; --box-2-line: #2f9e44;
+    --box-3: #ffec99; --box-3-line: #f08c00;
+    --box-4: #e9ecef; --box-4-line: #495057;
+    --svg-ink: #17181c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #16171a; --surface: #1e2024; --ink: #f0eee9; --ink-soft: #a2a7ae;
+      --line: #33363c; --accent: #74c0fc; --warn-bg: #2b2312; --warn-line: #d9a323;
+      --code-bg: #24262b;
+      --box-1: #1c4b73; --box-1-line: #74c0fc;
+      --box-2: #1d4a2b; --box-2-line: #8ce99a;
+      --box-3: #4d3a10; --box-3-line: #ffd43b;
+      --box-4: #2c2f35; --box-4-line: #adb5bd;
+      --svg-ink: #f0eee9;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 2.5rem 1.25rem 5rem;
+    background: var(--bg); color: var(--ink);
+    font: 17px/1.65 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 880px; margin: 0 auto; }
+
+  h1 { font-size: clamp(1.9rem, 5vw, 2.6rem); line-height: 1.15; margin: 0 0 .6rem; letter-spacing: -.02em; }
+  .lede { font-size: 1.25rem; color: var(--ink-soft); margin: 0 0 2.5rem; max-width: 60ch; }
+  h2 { font-size: 1.15rem; text-transform: uppercase; letter-spacing: .08em;
+       color: var(--ink-soft); margin: 3rem 0 1rem; }
+
+  /* ---- the picture ---- */
+  figure { margin: 0 0 2.5rem; padding: 1.5rem 1rem; background: var(--surface);
+           border: 1px solid var(--line); border-radius: 14px; overflow-x: auto; }
+  figure svg { width: 100%; height: auto; display: block; min-width: 520px; }
+  figcaption { margin-top: 1rem; font-size: .95rem; color: var(--ink-soft); text-align: center; }
+  .box-label { font: 600 17px/1.3 ui-sans-serif, system-ui, sans-serif; fill: var(--svg-ink); }
+  .edge-label { font: 500 14px/1.2 ui-sans-serif, system-ui, sans-serif; fill: var(--ink-soft); }
+  .edge { stroke: var(--svg-ink); stroke-width: 2.5; fill: none; }
+
+  /* ---- steps ---- */
+  ol.steps { list-style: none; counter-reset: s; padding: 0; margin: 0; }
+  ol.steps li { counter-increment: s; position: relative; padding: 0 0 1.4rem 3.4rem; }
+  ol.steps li::before {
+    content: counter(s); position: absolute; left: 0; top: -.1rem;
+    width: 2.3rem; height: 2.3rem; border-radius: 50%;
+    background: var(--box-1); color: var(--box-1-line);
+    display: grid; place-items: center; font-weight: 700; font-size: 1.05rem;
+  }
+  ol.steps strong { display: block; font-size: 1.05rem; }
+  ol.steps p { margin: .15rem 0 0; color: var(--ink-soft); }
+
+  /* ---- gotcha ---- */
+  .gotcha { background: var(--warn-bg); border-left: 5px solid var(--warn-line);
+            border-radius: 0 10px 10px 0; padding: 1.1rem 1.3rem; margin: 2rem 0; }
+  .gotcha h3 { margin: 0 0 .4rem; font-size: 1.05rem; }
+  .gotcha p:last-child { margin-bottom: 0; }
+
+  code { background: var(--code-bg); padding: .12em .4em; border-radius: 5px;
+         font: .88em/1.5 ui-monospace, "Cascadia Code", Consolas, monospace; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px;
+        padding: 1rem 1.1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  a { color: var(--accent); }
+  footer { margin-top: 3.5rem; padding-top: 1.2rem; border-top: 1px solid var(--line);
+           font-size: .9rem; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+<main>
+
+  <h1>FEATURE NAME, in plain words</h1>
+  <p class="lede">ONE SENTENCE. What this thing does, said the way you would say it out loud.</p>
+
+  <!-- THE PICTURE.
+       Replace with a diagram matching the .excalidraw scene. Keep 16px+ text,
+       one meaning per arrow, and colours from the CSS tokens above. -->
+  <figure>
+    <svg viewBox="0 0 760 200" role="img" aria-label="DESCRIBE THE DIAGRAM FOR SCREEN READERS">
+      <defs>
+        <marker id="head" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="var(--svg-ink)" />
+        </marker>
+      </defs>
+
+      <rect x="20" y="60" width="200" height="80" rx="12"
+            fill="var(--box-1)" stroke="var(--box-1-line)" stroke-width="2.5" />
+      <text class="box-label" x="120" y="105" text-anchor="middle">STEP ONE</text>
+
+      <line class="edge" x1="228" y1="100" x2="272" y2="100" marker-end="url(#head)" />
+      <text class="edge-label" x="250" y="88" text-anchor="middle">verb</text>
+
+      <rect x="280" y="60" width="200" height="80" rx="12"
+            fill="var(--box-3)" stroke="var(--box-3-line)" stroke-width="2.5" />
+      <text class="box-label" x="380" y="105" text-anchor="middle">STEP TWO</text>
+
+      <line class="edge" x1="488" y1="100" x2="532" y2="100" marker-end="url(#head)" />
+
+      <rect x="540" y="60" width="200" height="80" rx="12"
+            fill="var(--box-2)" stroke="var(--box-2-line)" stroke-width="2.5" />
+      <text class="box-label" x="640" y="105" text-anchor="middle">RESULT</text>
+    </svg>
+    <figcaption>Editable version: <code>SLUG.excalidraw</code></figcaption>
+  </figure>
+
+  <h2>What happens, step by step</h2>
+  <ol class="steps">
+    <li><strong>STEP ONE</strong><p>One sentence. Twelve words or fewer.</p></li>
+    <li><strong>STEP TWO</strong><p>One sentence. Name the real file if it helps.</p></li>
+    <li><strong>RESULT</strong><p>What the reader now has.</p></li>
+  </ol>
+
+  <div class="gotcha">
+    <h3>⚠️ The part that surprises people</h3>
+    <p>THE TRAP, in two sentences. Point at the exact line: <code>path/to/file.ts:LINE</code>.</p>
+  </div>
+
+  <h2>Try it</h2>
+<pre><code>npm test -- src/tests/path/to.spec.ts</code></pre>
+
+  <footer>
+    Generated by the <code>eli5-diagram</code> skill · diagram source <code>SLUG.spec.json</code>
+  </footer>
+
+</main>
+</body>
+</html>

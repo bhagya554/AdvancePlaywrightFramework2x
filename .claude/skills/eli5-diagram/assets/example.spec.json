@@ -1,0 +1,23 @@
+{
+  "title": "How a spec reaches the browser",
+  "direction": "right",
+  "nodes": [
+    { "id": "spec",    "label": "Spec file",          "color": "yellow", "shape": "ellipse" },
+    { "id": "fixture", "label": "Fixture\ntest-base", "color": "blue" },
+    { "id": "pom",     "label": "Page Object\nBasePage", "color": "blue" },
+    { "id": "util",    "label": "UtilElement\nLocator", "color": "purple" },
+    { "id": "pw",      "label": "Playwright\nbrowser", "color": "green", "shape": "ellipse" },
+    { "id": "log",     "label": "logs/\ncombined.log", "color": "grey", "row": 1, "x": 692, "y": 350 }
+  ],
+  "edges": [
+    { "from": "spec",    "to": "fixture", "label": "imports" },
+    { "from": "fixture", "to": "pom",     "label": "builds" },
+    { "from": "pom",     "to": "util",    "label": "this.el" },
+    { "from": "util",    "to": "pw",      "label": "acts", "emphasis": true },
+    { "from": "util",    "to": "log",     "label": "logs" }
+  ],
+  "notes": [
+    { "text": "src/fixtures/test-base.ts", "at": "fixture" },
+    { "text": "constructs only — no navigation", "at": "pom" }
+  ]
+}

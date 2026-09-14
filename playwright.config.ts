@@ -66,13 +66,26 @@ export default defineConfig({
     video: 'on',
     /* See https://playwright.dev/docs/trace-viewer */
     trace: 'on',
+    headless: false
+
   },
 
   /* Configure projects for major browsers */
   projects: [
     {
       name: 'chromium',
+      testDir: './src/tests',
       use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'api',
+      testDir: './src/api',
+      use: {
+        baseURL: process.env.API_BASE_URL || 'https://restful-booker.herokuapp.com',
+        headless: true,
+        video: 'off',
+        trace: 'off',
+      }
     }
   ]
 });

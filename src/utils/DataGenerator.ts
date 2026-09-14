@@ -16,6 +16,7 @@
 
 
 import { faker } from '@faker-js/faker';
+import type { Booking } from '@api/BookingApi';
 
 export interface Credentials {
     username: string,
@@ -111,6 +112,29 @@ export class DataGenerator {
             fullName: `${firstName} ${lastName}`,
             phone: DataGenerator.phone(),
             postalCode: DataGenerator.postalCode()
+        }
+    }
+
+    // ---------- restful-booker (API tests) ----------
+
+    /** ISO date (YYYY-MM-DD) within `daysFromNow` days of `refDate`. */
+    private static isoDate(daysFromNow: number, refDate: string = '2026-01-01T00:00:00'): string {
+        return faker.date.soon({ days: daysFromNow, refDate }).toISOString().slice(0, 10);
+    }
+
+    /** Random restful-booker `Booking` payload; pass overrides for specific fields. */
+    static booking(overrides: Partial<Booking> = {}): Booking {
+        return {
+            firstname: DataGenerator.firstName(),
+            lastname: DataGenerator.lastName(),
+            totalprice: faker.number.int({ min: 100, max: 1000 }),
+            depositpaid: faker.datatype.boolean(),
+            bookingdates: {
+                checkin: DataGenerator.isoDate(30),
+                checkout: DataGenerator.isoDate(60),
+            },
+            additionalneeds: faker.helpers.arrayElement(['Breakfast', 'Late checkout']),
+            ...overrides,
         }
     }
 }
