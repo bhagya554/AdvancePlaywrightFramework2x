@@ -1,0 +1,34 @@
+[
+  {
+    "caseId": "TC-CHK-01",
+    "username": "standard_user",
+    "password": "tta_secret",
+    "items": ["test-allthethings-tshirt-red"],
+    "submitStepOneTwice": false,
+    "note": "Happy path. Single item, clean checkout."
+  },
+  {
+    "caseId": "TC-CHK-02",
+    "username": "standard_user",
+    "password": "tta_secret",
+    "items": ["tta-bike-light", "tta-bolt-tshirt", "tta-fleece-jacket"],
+    "submitStepOneTwice": false,
+    "note": "Three items. Verifies the cart and overview carry every row through checkout."
+  },
+  {
+    "caseId": "TC-CHK-03",
+    "username": "problem_user",
+    "password": "tta_secret",
+    "items": ["tta-practice-backpack"],
+    "submitStepOneTwice": true,
+    "note": "Step one clears firstName on the first submit; refill and submit again."
+  },
+  {
+    "caseId": "TC-CHK-04",
+    "username": "performance_glitch_user",
+    "password": "tta_secret",
+    "items": ["tta-junior-tester-onesie", "tta-bike-light"],
+    "submitStepOneTwice": false,
+    "note": "Slow but functional. Exercises waits across the full flow with two items."
+  }
+]

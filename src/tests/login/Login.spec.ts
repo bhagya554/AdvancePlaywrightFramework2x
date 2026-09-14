@@ -23,8 +23,9 @@ test.describe('TTACart - Login', () => {
 
         await test.step('Verify login form is no longer shown', async () => {
             log.info('Asserting login form is hidden after login')
-            const loginButton=loginPage.getLoginButtonLocator();
-            await expect(loginButton).toBeHidden();
+            // const loginButton=loginPage.getLoginButtonLocator();
+            // await expect(loginButton).toBeHidden();
+            await loginPage.waitForLoginButtonHidden();
         })
     })
 })

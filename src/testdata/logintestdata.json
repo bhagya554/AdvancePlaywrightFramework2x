@@ -1,0 +1,39 @@
+[
+  {
+    "username": "standard_user",
+    "password": "tta_secret",
+    "outcome": "success",
+    "note": "Happy path. Logs in and reaches the inventory page."
+  },
+  {
+    "username": "locked_out_user",
+    "password": "tta_secret",
+    "outcome": "locked",
+    "expectedError": "Sorry, this user has been locked out.",
+    "note": "Correct password, account disabled. Stays on login with an error banner."
+  },
+  {
+    "username": "problem_user",
+    "password": "tta_secret",
+    "outcome": "success",
+    "note": "Logs in, but the UI misbehaves (broken images, checkout step one clears firstName on first submit)."
+  },
+  {
+    "username": "performance_glitch_user",
+    "password": "tta_secret",
+    "outcome": "success",
+    "note": "Logs in slowly. Used to exercise waits and timeouts."
+  },
+  {
+    "username": "error_user",
+    "password": "tta_secret",
+    "outcome": "success",
+    "note": "Logs in, but some downstream actions fail."
+  },
+  {
+    "username": "visual_user",
+    "password": "tta_secret",
+    "outcome": "success",
+    "note": "Logs in with intentional visual/layout defects."
+  }
+]

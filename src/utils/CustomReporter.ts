@@ -51,6 +51,7 @@ interface TestData {
     error?: string;
     errorStack?: string;
     tags: string[];
+    attachments: { name: string; contentType: string; content: string }[];
 }
 
 interface FileGroup {
@@ -80,6 +81,11 @@ class CustomTTAReporter implements Reporter {
     private testStartTimeMap: Map<string, number> = new Map();
     private testStepCounterMap: Map<string, number> = new Map();
     private testCounter: number = 0;
+    // Artifact index stamped per test at onTestBegin. Reporters run in one
+    // process while workers run in parallel, so every onTestBegin fires before
+    // the first onTestEnd — reading the shared counter at end time gave every
+    // test the same filename and each copy overwrote the last.
+    private testIndexMap: Map<string, number> = new Map();
     private runningTests: Map<string, TestData> = new Map();
     private completedTestIds: Set<string> = new Set();
 
@@ -116,6 +122,7 @@ class CustomTTAReporter implements Reporter {
         this.testStartTimeMap.set(test.id, Date.now());
         this.testStepCounterMap.set(test.id, 0);
         this.testCounter++;
+        this.testIndexMap.set(test.id, this.testCounter);
 
         const testFile = path.basename(test.location.file);
         console.log(`\n▶️  STARTING: ${test.title}`);
@@ -146,6 +153,7 @@ class CustomTTAReporter implements Reporter {
             steps: [],
             logs: [],
             tags: test.tags || [],
+            attachments: [],
         });
 
         this.updateReportRealTime();
@@ -226,18 +234,24 @@ class CustomTTAReporter implements Reporter {
         }
         console.log(`\n   📊 Running Total: ✅ ${this.suiteStats.passed} | ❌ ${this.suiteStats.failed} | ⏭️ ${this.suiteStats.skipped}`);
 
+        // Stable per-test artifact suffix. The retry segment keeps a retried
+        // attempt from overwriting the artifacts of its own earlier attempt.
+        const testIndex = this.testIndexMap.get(test.id) ?? ++this.testCounter;
+        const artifactId = result.retry > 0 ? `${testIndex}_retry${result.retry}` : `${testIndex}`;
+
         const currentTestSteps = this.testStepsMap.get(test.id) || [];
         const testLogs = this.collectTestLogs(result);
         this.associateLogsWithSteps(test, result, currentTestSteps, testLogs);
 
         const screenshots: { name: string; path: string }[] = [];
         const stepScreenshots: Map<string, string> = new Map();
+        const customAttachments: { name: string; contentType: string; content: string }[] = [];
         let videoPath: string | undefined;
         let tracePath: string | undefined;
 
         for (const attachment of result.attachments) {
             if (attachment.contentType === 'image/png') {
-                const screenshotName = `screenshot_${this.testCounter}_${screenshots.length + 1}.png`;
+                const screenshotName = `screenshot_${artifactId}_${screenshots.length + 1}.png`;
                 const destPath = path.join('tta-report', 'screenshots', screenshotName);
                 const destDir = path.dirname(destPath);
                 if (!fs.existsSync(destDir)) {
@@ -259,7 +273,7 @@ class CustomTTAReporter implements Reporter {
             }
 
             if (attachment.contentType === 'video/webm' && attachment.path) {
-                const videoName = `video_${this.testCounter}.webm`;
+                const videoName = `video_${artifactId}.webm`;
                 const destPath = path.join('tta-report', 'videos', videoName);
                 const destDir = path.dirname(destPath);
                 if (!fs.existsSync(destDir)) {
@@ -274,7 +288,7 @@ class CustomTTAReporter implements Reporter {
             }
 
             if (attachment.name === 'trace' && attachment.path) {
-                const traceName = `trace_${this.testCounter}.zip`;
+                const traceName = `trace_${artifactId}.zip`;
                 const destPath = path.join('tta-report', 'traces', traceName);
                 const destDir = path.dirname(destPath);
                 if (!fs.existsSync(destDir)) {
@@ -285,6 +299,27 @@ class CustomTTAReporter implements Reporter {
                     tracePath = `traces/${traceName}`;
                 } catch {
                     console.warn(`Failed to copy trace: ${attachment.path}`);
+                }
+            }
+
+            // Custom testInfo.attach() payloads (JSON/text) — step-logs are
+            // consumed separately by associateLogsWithSteps, skip those here.
+            const isHandled = attachment.contentType === 'image/png'
+                || attachment.contentType === 'video/webm'
+                || attachment.name === 'trace'
+                || /^step-\d+-logs$/.test(attachment.name);
+            if (!isHandled && (attachment.body || attachment.path)) {
+                try {
+                    const raw = attachment.body
+                        ? attachment.body.toString('utf-8')
+                        : fs.readFileSync(attachment.path!, 'utf-8');
+                    customAttachments.push({
+                        name: attachment.name,
+                        contentType: attachment.contentType,
+                        content: raw,
+                    });
+                } catch {
+                    console.warn(`Failed to read attachment: ${attachment.name}`);
                 }
             }
         }
@@ -346,6 +381,7 @@ class CustomTTAReporter implements Reporter {
             error: result.error?.message,
             errorStack: result.error?.stack,
             tags: tagMatches,
+            attachments: customAttachments,
         };
 
         this.testResults.push(testData);
@@ -1015,6 +1051,36 @@ class CustomTTAReporter implements Reporter {
 
             html += `
                     </div>
+                </div>
+            </div>`;
+        }
+
+        if (test.attachments.length > 0) {
+            html += `
+            <div class="detail-section attachments-section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <span class="section-arrow">▼</span> Attachments (${test.attachments.length})
+                </div>
+                <div class="section-content">`;
+
+            for (const attachment of test.attachments) {
+                const isJson = attachment.contentType.includes('json');
+                let displayContent = attachment.content;
+                if (isJson) {
+                    try {
+                        displayContent = JSON.stringify(JSON.parse(attachment.content), null, 2);
+                    } catch {
+                        // leave as-is if not valid JSON
+                    }
+                }
+                html += `
+                    <div class="error-box" style="margin-bottom: 12px;">
+                        <div class="step-console-header">📎 ${this.escapeHtml(attachment.name)} <span style="font-weight:400;color:var(--gray-500);">(${this.escapeHtml(attachment.contentType)})</span></div>
+                        <pre class="stack-trace-content">${this.escapeHtml(displayContent)}</pre>
+                    </div>`;
+            }
+
+            html += `
                 </div>
             </div>`;
         }
