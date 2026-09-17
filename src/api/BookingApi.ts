@@ -166,5 +166,18 @@ export class BookingApi {
 
         return response.status();
     }
+
+    // ponytail: retries every failure, including bad credentials that can never succeed.
+    // Inspect the error and rethrow non-retryable ones if wasted attempts start to matter.
+    async getAuthTokenWithRetry(username?: string, password?: string, retries = 3): Promise<string> {
+        for (let i = 1; i < retries; i++) {
+            try {
+                return await this.getAuthToken(username, password)
+            } catch {
+                await new Promise(r => setTimeout(r, 500 * i))
+            }
+        }
+        return this.getAuthToken(username, password)
+    }
 }
 
