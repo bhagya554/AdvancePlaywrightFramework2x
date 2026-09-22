@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ELI5 — How a Cucumber scenario runs</title>
+<style>
+  :root {
+    --bg: #fbfaf8;
+    --surface: #ffffff;
+    --ink: #17181c;
+    --ink-soft: #5b6068;
+    --line: #e0ddd6;
+    --accent: #1971c2;
+    --warn-bg: #fff8e6;
+    --warn-line: #f0a500;
+    --code-bg: #f2f0ec;
+    --box-1: #a5d8ff; --box-1-line: #1971c2;
+    --box-2: #b2f2bb; --box-2-line: #2f9e44;
+    --box-3: #ffec99; --box-3-line: #f08c00;
+    --box-4: #e9ecef; --box-4-line: #495057;
+    --box-5: #ffc9c9; --box-5-line: #e03131;
+    --svg-ink: #17181c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #16171a; --surface: #1e2024; --ink: #f0eee9; --ink-soft: #a2a7ae;
+      --line: #33363c; --accent: #74c0fc; --warn-bg: #2b2312; --warn-line: #d9a323;
+      --code-bg: #24262b;
+      --box-1: #1c4b73; --box-1-line: #74c0fc;
+      --box-2: #1d4a2b; --box-2-line: #8ce99a;
+      --box-3: #4d3a10; --box-3-line: #ffd43b;
+      --box-4: #2c2f35; --box-4-line: #adb5bd;
+      --box-5: #5c2020; --box-5-line: #ff8787;
+      --svg-ink: #f0eee9;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 2.5rem 1.25rem 5rem;
+    background: var(--bg); color: var(--ink);
+    font: 17px/1.65 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 880px; margin: 0 auto; }
+
+  h1 { font-size: clamp(1.9rem, 5vw, 2.6rem); line-height: 1.15; margin: 0 0 .6rem; letter-spacing: -.02em; }
+  .lede { font-size: 1.25rem; color: var(--ink-soft); margin: 0 0 2.5rem; max-width: 60ch; }
+  h2 { font-size: 1.15rem; text-transform: uppercase; letter-spacing: .08em;
+       color: var(--ink-soft); margin: 3rem 0 1rem; }
+
+  figure { margin: 0 0 2.5rem; padding: 1.5rem 1rem; background: var(--surface);
+           border: 1px solid var(--line); border-radius: 14px; overflow-x: auto; }
+  figure svg { width: 100%; height: auto; display: block; min-width: 900px; }
+  figcaption { margin-top: 1rem; font-size: .95rem; color: var(--ink-soft); text-align: center; }
+  .box-label { font: 600 17px/1.3 ui-sans-serif, system-ui, sans-serif; fill: var(--svg-ink); }
+  .box-sub { font: 500 15px/1.2 ui-sans-serif, system-ui, sans-serif; fill: var(--ink-soft); }
+  .edge-label { font: 500 14px/1.2 ui-sans-serif, system-ui, sans-serif; fill: var(--ink-soft); }
+  .edge { stroke: var(--svg-ink); stroke-width: 2.5; fill: none; }
+  .edge-break { stroke: var(--box-5-line); stroke-width: 4; fill: none; }
+
+  ol.steps { list-style: none; counter-reset: s; padding: 0; margin: 0; }
+  ol.steps li { counter-increment: s; position: relative; padding: 0 0 1.4rem 3.4rem; }
+  ol.steps li::before {
+    content: counter(s); position: absolute; left: 0; top: -.1rem;
+    width: 2.3rem; height: 2.3rem; border-radius: 50%;
+    background: var(--box-1); color: var(--box-1-line);
+    display: grid; place-items: center; font-weight: 700; font-size: 1.05rem;
+  }
+  ol.steps strong { display: block; font-size: 1.05rem; }
+  ol.steps p { margin: .15rem 0 0; color: var(--ink-soft); }
+
+  .gotcha { background: var(--warn-bg); border-left: 5px solid var(--warn-line);
+            border-radius: 0 10px 10px 0; padding: 1.1rem 1.3rem; margin: 2rem 0; }
+  .gotcha h3 { margin: 0 0 .4rem; font-size: 1.05rem; }
+  .gotcha p:last-child { margin-bottom: 0; }
+
+  code { background: var(--code-bg); padding: .12em .4em; border-radius: 5px;
+         font: .88em/1.5 ui-monospace, "Cascadia Code", Consolas, monospace; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px;
+        padding: 1rem 1.1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  a { color: var(--accent); }
+  footer { margin-top: 3.5rem; padding-top: 1.2rem; border-top: 1px solid var(--line);
+           font-size: .9rem; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+<main>
+
+  <h1>How a Cucumber scenario runs</h1>
+  <p class="lede">One config file picks which <code>.feature</code> files to read, then every scenario
+  gets its own fresh box — the World — to carry the browser and the page objects.</p>
+
+  <figure>
+    <svg viewBox="0 0 1700 230" role="img"
+         aria-label="Seven stages left to right: the cucumber-js command, cucumber.js config, ts-node, world.ts, a new CustomWorld per scenario, the Before hook, and the steps running. The link between the Before hook and the steps is drawn in red because the hook file is empty.">
+      <defs>
+        <marker id="head" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="var(--svg-ink)" />
+        </marker>
+        <marker id="head-break" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="var(--box-5-line)" />
+        </marker>
+      </defs>
+
+      <!-- 1 command -->
+      <rect x="20" y="60" width="180" height="92" rx="46"
+            fill="var(--box-4)" stroke="var(--box-4-line)" stroke-width="2.5" />
+      <text class="box-label" x="110" y="100" text-anchor="middle">cucumber-js</text>
+      <text class="box-sub"   x="110" y="124" text-anchor="middle">-p level1</text>
+
+      <line class="edge" x1="206" y1="106" x2="254" y2="106" marker-end="url(#head)" />
+
+      <!-- 2 config -->
+      <rect x="260" y="60" width="180" height="92" rx="12"
+            fill="var(--box-1)" stroke="var(--box-1-line)" stroke-width="2.5" />
+      <text class="box-label" x="350" y="100" text-anchor="middle">cucumber.js</text>
+      <text class="box-sub"   x="350" y="124" text-anchor="middle">picks profile</text>
+
+      <line class="edge" x1="446" y1="106" x2="494" y2="106" marker-end="url(#head)" />
+      <text class="edge-label" x="470" y="94" text-anchor="middle">loads TS</text>
+
+      <!-- 3 ts-node -->
+      <rect x="500" y="60" width="180" height="92" rx="12"
+            fill="var(--box-1)" stroke="var(--box-1-line)" stroke-width="2.5" />
+      <text class="box-label" x="590" y="100" text-anchor="middle">ts-node +</text>
+      <text class="box-sub"   x="590" y="124" text-anchor="middle">tsconfig-paths</text>
+
+      <line class="edge" x1="686" y1="106" x2="734" y2="106" marker-end="url(#head)" />
+
+      <!-- 4 world.ts -->
+      <rect x="740" y="60" width="180" height="92" rx="12"
+            fill="var(--box-2)" stroke="var(--box-2-line)" stroke-width="2.5" />
+      <text class="box-label" x="830" y="100" text-anchor="middle">world.ts</text>
+      <text class="box-sub"   x="830" y="124" text-anchor="middle">registers World</text>
+
+      <line class="edge" x1="926" y1="106" x2="974" y2="106" marker-end="url(#head)" />
+      <text class="edge-label" x="950" y="94" text-anchor="middle">per scenario</text>
+
+      <!-- 5 new CustomWorld -->
+      <rect x="980" y="60" width="180" height="92" rx="12"
+            fill="var(--box-2)" stroke="var(--box-2-line)" stroke-width="2.5" />
+      <text class="box-label" x="1070" y="100" text-anchor="middle">new</text>
+      <text class="box-sub"   x="1070" y="124" text-anchor="middle">CustomWorld</text>
+
+      <line class="edge" x1="1166" y1="106" x2="1214" y2="106" marker-end="url(#head)" />
+
+      <!-- 6 Before hook -->
+      <rect x="1220" y="60" width="180" height="92" rx="12"
+            fill="var(--box-5)" stroke="var(--box-5-line)" stroke-width="2.5" />
+      <text class="box-label" x="1310" y="100" text-anchor="middle">Before hook</text>
+      <text class="box-sub"   x="1310" y="124" text-anchor="middle">fills it in</text>
+      <text class="edge-label" x="1310" y="185" text-anchor="middle" fill="var(--box-5-line)">hooks.ts — 0 bytes</text>
+
+      <line class="edge-break" x1="1406" y1="106" x2="1454" y2="106" marker-end="url(#head-break)" />
+
+      <!-- 7 steps -->
+      <rect x="1460" y="60" width="180" height="92" rx="12"
+            fill="var(--box-1)" stroke="var(--box-1-line)" stroke-width="2.5" />
+      <text class="box-label" x="1550" y="100" text-anchor="middle">Steps run</text>
+      <text class="box-sub"   x="1550" y="124" text-anchor="middle">this.page</text>
+    </svg>
+    <figcaption>Editable version: <code>cucumber-flow.excalidraw</code></figcaption>
+  </figure>
+
+  <h2>What happens, step by step</h2>
+  <ol class="steps">
+    <li><strong>You run <code>cucumber-js</code></strong>
+      <p>A profile flag picks one slice of the suite — <code>level0</code>, <code>level1</code>, <code>level2</code>.</p></li>
+    <li><strong><code>cucumber.js</code> answers two questions</strong>
+      <p>Which <code>.feature</code> files to read, and which step files to load.</p></li>
+    <li><strong><code>ts-node</code> makes TypeScript runnable</strong>
+      <p>It compiles on the fly; <code>tsconfig-paths</code> teaches it <code>@pages/*</code>.</p></li>
+    <li><strong><code>world.ts</code> registers the World class</strong>
+      <p><code>setWorldConstructor(CustomWorld)</code> — use mine, not Cucumber's default.</p></li>
+    <li><strong>Each scenario gets a fresh World</strong>
+      <p>Built empty. Every field is still <code>undefined</code> at this moment.</p></li>
+    <li><strong>The <code>Before</code> hook fills it in</strong>
+      <p>Launch browser, open a page, call <code>initPages()</code>. This is the missing piece.</p></li>
+    <li><strong>Steps share that one object</strong>
+      <p><code>this.page</code>, <code>this.loginPage</code>, <code>this.scratch</code> — same instance throughout.</p></li>
+  </ol>
+
+  <div class="gotcha">
+    <h3>⚠️ The part that surprises people</h3>
+    <p>Every field in <code>CustomWorld</code> is declared with <code>!</code> — <code>browser!</code>,
+    <code>page!</code>, <code>loginPage!</code> (<code>src/cucumber/support/world.ts:24</code>). That
+    tells TypeScript "I promise this gets assigned later", and the promise is kept by the
+    <code>Before</code> hook.</p>
+    <p>But <code>src/cucumber/support/hooks.ts</code> is <strong>0 bytes</strong>. Nothing launches a
+    browser and <code>initPages()</code> is never called, so <code>npm run typecheck</code> passes
+    cleanly while the first scenario dies on <code>this.page</code> being <code>undefined</code>. The
+    <code>!</code> moved the error from compile time to run time.</p>
+  </div>
+
+  <h2>Try it</h2>
+<pre><code>npx cucumber-js -p level1</code></pre>
+  <p>Right now this finds no <code>.feature</code> files, because
+  <code>src/cucumber/level-01-basic/</code> does not exist yet — <code>cucumber.js</code> names the
+  folders the suite is meant to grow into.</p>
+
+  <footer>
+    Generated by the <code>eli5-diagram</code> skill · diagram source <code>cucumber-flow.spec.json</code>
+  </footer>
+
+</main>
+</body>
+</html>

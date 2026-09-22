@@ -1,0 +1,32 @@
+{
+  "title": "How a Cucumber scenario runs",
+  "direction": "right",
+  "nodeWidth": 210,
+  "nodeHeight": 110,
+  "gapX": 110,
+  "nodes": [
+    { "id": "cmd",   "label": "cucumber-js\n-p level1",      "color": "grey",  "shape": "ellipse" },
+    { "id": "conf",  "label": "cucumber.js\npicks profile",  "color": "blue" },
+    { "id": "tsn",   "label": "ts-node +\ntsconfig-paths",   "color": "blue" },
+    { "id": "world", "label": "world.ts\nregisters World",   "color": "green" },
+    { "id": "new",   "label": "new\nCustomWorld",            "color": "green" },
+    { "id": "hook",  "label": "Before hook\nfills it in",    "color": "red" },
+    { "id": "steps", "label": "Steps run\nthis.page",        "color": "blue" }
+  ],
+  "edges": [
+    { "from": "cmd",   "to": "conf" },
+    { "from": "conf",  "to": "tsn",   "label": "loads TS" },
+    { "from": "tsn",   "to": "world" },
+    { "from": "world", "to": "new",   "label": "per scenario" },
+    { "from": "new",   "to": "hook" },
+    { "from": "hook",  "to": "steps", "emphasis": true }
+  ],
+  "notes": [
+    { "text": "cucumber.js (root)", "at": "conf" },
+    { "text": "src/cucumber/tsconfig.json", "at": "tsn" },
+    { "text": "world.ts:53", "at": "world" },
+    { "text": "fields still undefined", "at": "new" },
+    { "text": "hooks.ts — 0 bytes", "at": "hook", "color": "red" },
+    { "text": "needs this.page", "at": "steps" }
+  ]
+}

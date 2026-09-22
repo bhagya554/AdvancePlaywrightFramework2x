@@ -19,6 +19,9 @@ node_modules/
 # Custom TTA reporter output
 /tta-report/
 
+# Cucumber report output
+/reports/
+
 # Logs
 /logs/
 

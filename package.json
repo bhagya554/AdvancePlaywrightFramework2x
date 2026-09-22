@@ -23,6 +23,7 @@
   "license": "ISC",
   "description": "TypeScript UI and API test automation framework built on Playwright Test.",
   "devDependencies": {
+    "@cucumber/cucumber": "^13.2.1",
     "@faker-js/faker": "^10.5.0",
     "@playwright/test": "^1.62.1",
     "@types/node": "^26.2.0",
@@ -33,6 +34,8 @@
     "csv-parse": "^7.0.2",
     "dotenv": "^17.4.2",
     "jsonpath-plus": "^10.4.0",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^7.0.2",
     "winston": "^3.19.0",
     "xlsx": "^0.18.5"

@@ -29,6 +29,8 @@ A TypeScript-based UI and API test automation framework built on [Playwright Tes
 | Area | Library | Version |
 | --- | --- | --- |
 | Test runner | `@playwright/test` | ^1.62.1 |
+| BDD runner | `@cucumber/cucumber` | ^13.2.1 |
+| TS loader for Cucumber | `ts-node`, `tsconfig-paths` | ^10.9.2 / ^4.2.0 |
 | Language | `typescript` | ^7.0.2 |
 | Node typings | `@types/node` | ^26.2.0 |
 | Test data generation | `@faker-js/faker` | ^10.5.0 |
@@ -52,9 +54,16 @@ AdvancedFramework_2x/
 ├── .github/
 │   └── workflows/
 │       └── playwright.yml          # CI pipeline (GitHub Actions)
-├── docs/                           # Framework docs (e.g. dotenv-support.md)
+├── docs/                           # Framework docs (e.g. dotenv-support.md, eli5/ explainers)
+├── learnings/                      # Study notes (cucumberFramework.md, world.md, …)
 ├── rules/                          # Framework conventions / coding rules (placeholder)
 ├── src/
+│   ├── cucumber/                   # Cucumber BDD layer (run by cucumber-js, not Playwright Test)
+│   │   ├── support/
+│   │   │   ├── world.ts                # CustomWorld: browser/context/page + page objects
+│   │   │   └── hooks.ts                # BeforeAll/Before/After: launch, per-scenario context, fail screenshot
+│   │   ├── level-00-installation/      # features/*.feature + steps/*.ts
+│   │   └── tsconfig.json               # CommonJS override for ts-node
 │   ├── api/
 │   │   └── BookingApi.ts               # Typed client for restful-booker
 │   ├── config/
@@ -92,7 +101,9 @@ AdvancedFramework_2x/
 ├── tta-report/                     # Custom live HTML report (git-ignored)
 ├── .env                            # Local secrets (git-ignored)
 ├── .env.example                    # Template for .env
+├── reports/cucumber/               # Cucumber HTML report (git-ignored)
 ├── .gitignore
+├── cucumber.js                     # Cucumber profiles (default, level0, level1, level2)
 ├── package.json
 ├── playwright.config.ts
 └── tsconfig.json
@@ -346,6 +357,23 @@ npm test -- --workers=1                            # force serial execution
 Two import styles coexist: `e2e-checkout_1.spec.ts` uses the fixture base (`@fixtures/test-base`); `Login.spec.ts` still does raw `@playwright/test` + manual construction. Prefer the fixture style for new specs.
 
 `testDir` is `./src/tests` — specs outside that tree are invisible to the runner regardless of subfolder depth.
+
+### Cucumber (BDD)
+
+Gherkin scenarios under `src/cucumber/` run through `cucumber-js`, separately from Playwright Test. Playwright is used only as the browser library; `hooks.ts` launches Chromium once per run and gives each scenario a fresh context and page on `CustomWorld`.
+
+```bash
+npx cucumber-js                     # default profile: every feature under src/cucumber
+npx cucumber-js --profile level0    # just level-00-installation
+npx cucumber-js --tags @smoke       # filter by tag
+HEADED=1 npx cucumber-js            # show the browser
+```
+
+- Profiles live in [cucumber.js](cucumber.js). `level1` / `level2` are declared ahead of their folders, which don't exist yet.
+- TypeScript is loaded by `ts-node` using [src/cucumber/tsconfig.json](src/cucumber/tsconfig.json) (CommonJS), with `tsconfig-paths` resolving the `@pages/*` / `@utils/*` aliases.
+- The base URL comes from `BASE_URL`, falling back to `https://app.thetestingacademy.com`. `TTA_ENV` is **not** consulted here.
+- Report: `reports/cucumber/report.html`. On failure, a screenshot is attached to the scenario.
+- There's no npm script for Cucumber yet. Walkthroughs are in [learnings/cucumberFramework.md](learnings/cucumberFramework.md), [learnings/world.md](learnings/world.md) and [docs/eli5/cucumber-flow.html](docs/eli5/cucumber-flow.html).
 
 ---
 
