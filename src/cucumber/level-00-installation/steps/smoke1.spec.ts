@@ -1,6 +1,6 @@
 import { Given,Then } from "@cucumber/cucumber";
 import {expect} from '@playwright/test'
-import { CustomWorld } from "src/cucumber/support/world";
+import { CustomWorld } from "@src/cucumber/support/world";
 import { LoginPage } from "@pages/LoginPage";
 
 Given('I open the TTACart login page',async function (this:CustomWorld){

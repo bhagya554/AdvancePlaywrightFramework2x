@@ -16,6 +16,15 @@
     "report": "playwright show-report",
     "codegen": "playwright codegen",
     "typecheck": "tsc --noEmit",
+    "cucumber": "cucumber-js",
+    "test:bdd": "cucumber-js",
+    "test:bdd:smoke": "cucumber-js --tags @smoke",
+    "test:bdd:report": "start \"\" reports\\cucumber\\report.html",
+    "cucumber:level0": "cucumber-js --profile level0",
+    "cucumber:level1": "cucumber-js --profile level1",
+    "cucumber:level2": "cucumber-js --profile level2",
+    "cucumber:headed": "cross-env HEADED=1 cucumber-js",
+    "lint": "eslint .",
     "install:browsers": "playwright install --with-deps"
   },
   "keywords": [],
@@ -36,6 +45,7 @@
     "jsonpath-plus": "^10.4.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "winston": "^3.19.0",
     "xlsx": "^0.18.5"

@@ -361,7 +361,7 @@ class CustomTTAReporter implements Reporter {
             parent = parent.parent;
         }
 
-        const tagMatches = test.title.match(/@\w+/g) || [];
+        const tagMatches = test.tags?.length ? test.tags : test.title.match(/@\w+/g) || [];
 
         const testData: TestData = {
             id: `test-${test.id}`,

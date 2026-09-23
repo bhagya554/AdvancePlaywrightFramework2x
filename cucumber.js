@@ -1,10 +1,18 @@
-process.env.TS_NODE_PROJECT = process.env.TS_NODE_PROJECT || 'src/cucumber/tsconfig.json';
+// tsx, not ts-node: ts-node needs TypeScript's JS API, which TypeScript 7 no longer ships.
+process.env.TSX_TSCONFIG_PATH = process.env.TSX_TSCONFIG_PATH || 'src/cucumber/tsconfig.json';
 
-const support = ['src/cucumber/support/**/*.ts'];
+// Exactly one hooks file may load. CUCUMBER_ARTIFACTS=1 swaps in the variant
+// that records video/trace/screenshot for the TTA report.
+const support = [
+    'src/cucumber/support/world.ts',
+    process.env.CUCUMBER_ARTIFACTS
+        ? 'src/cucumber/support/hooks_customreporter_video_trace_screenshot.ts'
+        : 'src/cucumber/support/hooks.ts',
+];
 
 const common = {
-    requireModule: ['ts-node/register', 'tsconfig-paths/register'],
-    format: ['progress-bar', 'html:reports/cucumber/report.html', 'summary'],
+    requireModule: ['tsx/cjs'],
+    format: ['progress-bar', 'html:reports/cucumber/report.html', 'summary', './src/utils/CucumberTTAFormatter.cjs'],
     formatOptions: { snippetInterface: 'async-await' },
     publishQuiet: true,
 };
