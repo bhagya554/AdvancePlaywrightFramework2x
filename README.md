@@ -30,7 +30,7 @@ A TypeScript-based UI and API test automation framework built on [Playwright Tes
 | --- | --- | --- |
 | Test runner | `@playwright/test` | ^1.62.1 |
 | BDD runner | `@cucumber/cucumber` | ^13.2.1 |
-| TS loader for Cucumber | `ts-node`, `tsconfig-paths` | ^10.9.2 / ^4.2.0 |
+| TS loader for Cucumber | `tsx` | ^4.23.15 |
 | Language | `typescript` | ^7.0.2 |
 | Node typings | `@types/node` | ^26.2.0 |
 | Test data generation | `@faker-js/faker` | ^10.5.0 |
@@ -61,9 +61,12 @@ AdvancedFramework_2x/
 │   ├── cucumber/                   # Cucumber BDD layer (run by cucumber-js, not Playwright Test)
 │   │   ├── support/
 │   │   │   ├── world.ts                # CustomWorld: browser/context/page + page objects
-│   │   │   └── hooks.ts                # BeforeAll/Before/After: launch, per-scenario context, fail screenshot
-│   │   ├── level-00-installation/      # features/*.feature + steps/*.ts
-│   │   └── tsconfig.json               # CommonJS override for ts-node
+│   │   │   ├── hooks.ts                # Default hooks: launch, per-scenario context, fail screenshot
+│   │   │   └── hooks_customreporter_video_trace_screenshot.ts  # CUCUMBER_ARTIFACTS=1: per-step screenshot + video + trace
+│   │   ├── level-00-installation/      # Smoke wiring: features/*.feature + steps/*.ts
+│   │   ├── level-01-basic/             # Background, tags, positive/negative login
+│   │   ├── level-02-data-driven/       # Scenario Outline, Data Table, external JSON (data/customers.json)
+│   │   └── tsconfig.json               # CommonJS override for tsx
 │   ├── api/
 │   │   └── BookingApi.ts               # Typed client for restful-booker
 │   ├── config/
@@ -96,6 +99,7 @@ AdvancedFramework_2x/
 │       ├── APIHelper.ts            # Generic HTTP verb wrapper + retry
 │       ├── visualStep.ts           # test.step + optional per-step screenshot
 │       ├── CustomReporter.ts       # Custom live HTML reporter (registered in config)
+│       ├── CucumberTTAFormatter.ts # Cucumber formatter that feeds CustomReporter (.cjs shim loads it)
 │       └── howToUseLogger.md       # Logger usage notes
 ├── logs/                           # combined.log from Winston (git-ignored)
 ├── tta-report/                     # Custom live HTML report (git-ignored)
@@ -362,18 +366,52 @@ Two import styles coexist: `e2e-checkout_1.spec.ts` uses the fixture base (`@fix
 
 Gherkin scenarios under `src/cucumber/` run through `cucumber-js`, separately from Playwright Test. Playwright is used only as the browser library; `hooks.ts` launches Chromium once per run and gives each scenario a fresh context and page on `CustomWorld`.
 
+| Level | Folder | Shows |
+| --- | --- | --- |
+| 0 | `level-00-installation/` | Cucumber + Playwright wiring smoke tests |
+| 1 | `level-01-basic/` | `Background`, tags (`@smoke @p0 @negative`), positive/negative login |
+| 2 | `level-02-data-driven/` | `Scenario Outline` + `Examples`, Data Tables, checkout data from external JSON |
+
 ```bash
-npx cucumber-js                     # default profile: every feature under src/cucumber
-npx cucumber-js --profile level0    # just level-00-installation
-npx cucumber-js --tags @smoke       # filter by tag
-HEADED=1 npx cucumber-js            # show the browser
+npm run test:bdd                               # default profile: every feature under src/cucumber
+npm run test:bdd:smoke                         # --tags @smoke
+npm run cucumber:level0 | cucumber:level1 | cucumber:level2   # one level, headed
+npm run cucumber:level2:report                 # level2, then open the TTA report
+npm run cucumber:level2:report:screenshots     # level2 + per-step screenshots, video, trace → TTA report
+npm run test:bdd:report                        # open reports/cucumber/report.html
+npx cucumber-js --tags @negative               # any tag expression
 ```
 
-- Profiles live in [cucumber.js](cucumber.js). `level1` / `level2` are declared ahead of their folders, which don't exist yet.
-- TypeScript is loaded by `ts-node` using [src/cucumber/tsconfig.json](src/cucumber/tsconfig.json) (CommonJS), with `tsconfig-paths` resolving the `@pages/*` / `@utils/*` aliases.
+- Profiles (`default`, `level0`, `level1`, `level2`) live in [cucumber.js](cucumber.js). `level2` also loads the level-01 steps, which it reuses.
+- TypeScript is loaded by `tsx` (`requireModule: ['tsx/cjs']`) using [src/cucumber/tsconfig.json](src/cucumber/tsconfig.json). `ts-node` was dropped because TypeScript 7 no longer ships the JS API it needs.
 - The base URL comes from `BASE_URL`, falling back to `https://app.thetestingacademy.com`. `TTA_ENV` is **not** consulted here.
-- Report: `reports/cucumber/report.html`. On failure, a screenshot is attached to the scenario.
-- There's no npm script for Cucumber yet. Walkthroughs are in [learnings/cucumberFramework.md](learnings/cucumberFramework.md), [learnings/world.md](learnings/world.md) and [docs/eli5/cucumber-flow.html](docs/eli5/cucumber-flow.html).
+- `HEADED=1` shows the browser. The `open report` scripts use Windows `start`.
+
+#### Hooks: plain vs. artifacts
+
+[cucumber.js](cucumber.js) loads **exactly one** hooks file. If both were loaded, every hook would run twice.
+
+| `CUCUMBER_ARTIFACTS` | Hooks file | Captures |
+| --- | --- | --- |
+| unset | [hooks.ts](src/cucumber/support/hooks.ts) | Screenshot only when a scenario fails |
+| `1` | [hooks_customreporter_video_trace_screenshot.ts](src/cucumber/support/hooks_customreporter_video_trace_screenshot.ts) | Screenshot **after every step**, video and Playwright trace per scenario |
+
+With artifacts on, an `AfterStep` hook attaches each PNG as `step-<n>-<step-text>`. That name is how `CustomReporter` puts the screenshot under the matching step. Skipped steps are not counted, so the numbering stays in line with the report. Video and trace are written to `test-results/cucumber/` and attached as file paths; [CucumberTTAFormatter.ts](src/utils/CucumberTTAFormatter.ts) copies them into `tta-report/`.
+
+> With `cross-env`, separate variables with spaces (`cross-env HEADED=1 CUCUMBER_ARTIFACTS=1 …`). If you use `;`, everything after the first `=` becomes the value of the first variable, and `CUCUMBER_ARTIFACTS` is never set.
+
+#### Reports
+
+- `reports/cucumber/report.html`: the standard Cucumber HTML report.
+- `tta-report/index.html`: the custom TTA report. `CucumberTTAFormatter` turns Cucumber messages into the `onTestBegin`/`onStepEnd`/`onTestEnd` calls that `CustomReporter` expects, so the BDD suite gets the same report as the Playwright specs. Hooks are not shown as steps.
+
+![TTA report: Cucumber level-2 run overview](docs/images/cucumber-tta-report-overview.png)
+
+Expanded step with its screenshot (`npm run cucumber:level2:report:screenshots`):
+
+![TTA report: per-step screenshot](docs/images/cucumber-tta-report-step.png)
+
+Walkthroughs: [learnings/cucumberFramework.md](learnings/cucumberFramework.md), [learnings/world.md](learnings/world.md), [docs/eli5/cucumber-flow.html](docs/eli5/cucumber-flow.html).
 
 ---
 

@@ -602,3 +602,478 @@ await this.context?.close();
 
 Without it, cleanup on a half-initialized scenario throws
 `Cannot read properties of undefined` and masks the real failure.
+
+---
+
+# 5. Data-driven checkout — `checkout-external-data.spec.ts`
+
+Step definitions in `src/cucumber/level-02-data-driven/steps/checkout-external-data.spec.ts`. Covers
+the whole chain from a TypeScript interface, through reading a JSON file, to a reusable Cucumber step
+that fills the checkout form from test data.
+
+Topics:
+
+1. The `CheckoutCustomer` interface
+2. Interfaces vs. JavaScript objects
+3. Reading files with `readFileSync`
+4. `Record<string, CheckoutCustomer>`
+5. Loading and accessing customer data
+6. Using the data in a Cucumber step
+7. The checkout workflow
+
+## `CheckoutCustomer` — the interface
+
+```ts
+export interface CheckoutCustomer {
+    firstName: string;
+    lastName: string;
+    postalCode: string;
+}
+```
+
+An **interface** is a blueprint: it defines which properties an object must have, and their types.
+
+### Analogy
+
+A customer registration form:
+
+```
+Customer Registration Form
+
+Required fields:
+✅ First Name
+✅ Last Name
+✅ Postal Code
+```
+
+Every customer record must contain these fields.
+
+### Valid
+
+```ts
+const customer: CheckoutCustomer = {
+    firstName: 'Alice',
+    lastName: 'Walker',
+    postalCode: '560001',
+};
+```
+
+### Invalid — missing property
+
+```ts
+const customer: CheckoutCustomer = {
+    firstName: 'Alice',
+    lastName: 'Walker',
+};
+// Error: Property 'postalCode' is missing
+```
+
+### Invalid — wrong type
+
+```ts
+const customer: CheckoutCustomer = {
+    firstName: 'Alice',
+    lastName: 'Walker',
+    postalCode: 560001,
+};
+// Error: postalCode must be a string
+```
+
+## Is it a JavaScript object?
+
+Yes. The interface exists only for TypeScript at development time — it disappears after compilation.
+
+**TypeScript:**
+
+```ts
+const customer: CheckoutCustomer = {
+    firstName: 'Alice',
+    lastName: 'Walker',
+    postalCode: '560001',
+};
+```
+
+**Compiled JavaScript:**
+
+```js
+const customer = {
+    firstName: 'Alice',
+    lastName: 'Walker',
+    postalCode: '560001',
+};
+```
+
+## `import { readFileSync } from 'node:fs'`
+
+`fs` = **File System**, a built-in Node.js module for reading, creating, updating and deleting files:
+
+```ts
+readFileSync()
+writeFileSync()
+mkdirSync()
+unlinkSync()
+```
+
+### What `readFileSync()` does
+
+Reads a file from disk. Given `customers.json`:
+
+```json
+{
+  "alice": {
+    "firstName": "Alice"
+  }
+}
+```
+
+```ts
+const content = readFileSync('./customers.json', 'utf8');
+```
+
+`content` is a **string**, not an object yet:
+
+```ts
+'{
+  "alice": {
+    "firstName": "Alice"
+  }
+}'
+```
+
+### Why "Sync"?
+
+It reads the whole file and **waits** until finished before moving to the next line.
+
+| Synchronous | Asynchronous |
+|---|---|
+| Go to restaurant | Order food |
+| Wait for food | Do other work |
+| Get food | Get food later |
+| Continue | |
+
+### `node:fs` vs `fs`
+
+Both work:
+
+```ts
+import { readFileSync } from 'fs';
+import { readFileSync } from 'node:fs';
+```
+
+Modern Node.js prefers `node:fs` — the prefix makes it explicit that this is a built-in module, not
+an npm package.
+
+## The JSON file
+
+`src/cucumber/level-02-data-driven/data/customers.json`:
+
+```json
+{
+  "alice": {
+    "firstName": "Alice",
+    "lastName": "Walker",
+    "postalCode": "560001"
+  },
+  "bob": {
+    "firstName": "Bob",
+    "lastName": "Singh",
+    "postalCode": "110011"
+  },
+  "carol": {
+    "firstName": "Carol",
+    "lastName": "Mendes",
+    "postalCode": "400001"
+  }
+}
+```
+
+Think of it as a customer book — each key holds one customer object:
+
+```
+Customer Book
+│
+├── alice
+├── bob
+└── carol
+```
+
+## `Record<string, CheckoutCustomer>`
+
+```ts
+type CustomerBook = Record<string, CheckoutCustomer>;
+```
+
+`Record<KeyType, ValueType>` is TypeScript shorthand for "an object whose keys are `KeyType` and
+whose values are `ValueType`". Here:
+
+| Part | Type |
+|---|---|
+| Key | `string` |
+| Value | `CheckoutCustomer` |
+
+```
+alice → CheckoutCustomer
+bob   → CheckoutCustomer
+carol → CheckoutCustomer
+```
+
+Equivalent long form:
+
+```ts
+type CustomerBook = {
+    [key: string]: CheckoutCustomer;
+};
+```
+
+## Loading the data
+
+```ts
+const customers: CustomerBook = JSON.parse(
+    readFileSync(join(__dirname, '../data/customers.json'), 'utf8')
+);
+```
+
+Read inside-out:
+
+1. **Build the path** — `join(__dirname, '../data/customers.json')`. `__dirname` is the folder of the
+   current file, `src/cucumber/level-02-data-driven/steps/`, so the path resolves to
+   `src/cucumber/level-02-data-driven/data/customers.json`. Using `__dirname` rather than a bare
+   relative path makes it independent of where the command was run from.
+2. **Read the file** — `readFileSync(path, 'utf8')` returns the file contents as a **string**.
+3. **Parse** — `JSON.parse(...)` turns that string into a real JavaScript object.
+
+The resulting object:
+
+```ts
+const customers = {
+    alice: { firstName: 'Alice', lastName: 'Walker', postalCode: '560001' },
+    bob:   { firstName: 'Bob',   lastName: 'Singh',  postalCode: '110011' },
+    carol: { firstName: 'Carol', lastName: 'Mendes', postalCode: '400001' },
+};
+```
+
+## Accessing a customer
+
+Bracket notation, keyed by name:
+
+```ts
+customers['alice'];
+// { firstName: 'Alice', lastName: 'Walker', postalCode: '560001' }
+
+customers['bob'];
+// { firstName: 'Bob', lastName: 'Singh', postalCode: '110011' }
+```
+
+Individual properties:
+
+```ts
+const customer = customers['alice'];
+
+customer.firstName;   // 'Alice'
+customer.lastName;    // 'Walker'
+customer.postalCode;  // '560001'
+```
+
+## What is data-driven testing?
+
+Instead of hard-coding data in the step:
+
+```ts
+fill('Alice');
+fill('Walker');
+fill('560001');
+```
+
+store it in JSON and look it up at runtime. One reusable step then serves every customer:
+
+```gherkin
+When I check out as the "alice" customer
+When I check out as the "bob" customer
+When I check out as the "carol" customer
+```
+
+## The step definition
+
+```ts
+When('I check out as the {string} customer', async function (this: CustomWorld, persona: string) {
+    const customer = customers[persona];
+    if (!customer) throw new Error(`No customer "${persona}" in customers.json`);
+    // ... checkout workflow below
+});
+```
+
+### `{string}` → `persona`
+
+Cucumber captures the quoted value from the feature line:
+
+| Feature line | `persona` |
+|---|---|
+| `When I check out as the "alice" customer` | `"alice"` |
+| `When I check out as the "bob" customer` | `"bob"` |
+
+### `customers[persona]`
+
+With `persona = "alice"`, `customers[persona]` is `customers['alice']`:
+
+```
+persona
+   ↓
+"alice"
+   ↓
+customers["alice"]
+   ↓
+{ firstName: "Alice", lastName: "Walker", postalCode: "560001" }
+```
+
+### The validation guard
+
+```ts
+if (!customer) throw new Error(`No customer "${persona}" in customers.json`);
+```
+
+If the feature file says:
+
+```gherkin
+When I check out as the "john" customer
+```
+
+but the JSON only has `alice`, `bob`, `carol`, then `customers['john']` is `undefined`. Without the
+guard the step would fail later with a confusing `Cannot read properties of undefined`. With it,
+the error names the real problem:
+
+```
+No customer "john" in customers.json
+```
+
+## The checkout workflow
+
+| # | Code | What it does |
+|---|---|---|
+| 1 | `await this.cartPage.open();` | Open the cart page |
+| 2 | `await this.cartPage.checkout();` | Click **Checkout** |
+| 3 | `await this.checkoutStepOnePage.assertLoaded();` | Verify step-one page loaded (e.g. URL / header visible) |
+| 4 | `await this.checkoutStepOnePage.fillGuest(customer);` | Fill the form from the customer object |
+| 5 | `await this.checkoutStepOnePage.continue();` | Click **Continue** |
+| 6 | `await this.checkoutStepTwoPage.assertLoaded();` | Verify step-two page loaded |
+| 7 | `await this.checkoutStepTwoPage.finish();` | Click **Finish** — order complete |
+
+### Inside `fillGuest(customer)`
+
+Conceptually:
+
+```ts
+async fillGuest(customer: CheckoutCustomer) {
+    await this.firstName.fill(customer.firstName);
+    await this.lastName.fill(customer.lastName);
+    await this.postalCode.fill(customer.postalCode);
+}
+```
+
+```
+customer                        form
+├── firstName  = Alice    →     First Name  = Alice
+├── lastName   = Walker   →     Last Name   = Walker
+└── postalCode = 560001   →     Postal Code = 560001
+```
+
+## End-to-end flow
+
+```
+When I check out as the "alice" customer
+        ↓
+persona = "alice"
+        ↓
+customer = customers["alice"]
+        ↓
+{ firstName: "Alice", lastName: "Walker", postalCode: "560001" }
+        ↓
+fillGuest(customer)
+        ↓
+First Name = Alice, Last Name = Walker, Postal Code = 560001
+        ↓
+continue()
+        ↓
+finish()
+        ↓
+Checkout completed
+```
+
+## Mental model
+
+`customers.json` is a mini database:
+
+```
+customers.json
+│
+├── alice
+│   ├── Alice
+│   ├── Walker
+│   └── 560001
+│
+├── bob
+│   ├── Bob
+│   ├── Singh
+│   └── 110011
+│
+└── carol
+    ├── Carol
+    ├── Mendes
+    └── 400001
+```
+
+The feature file supplies the key (`alice`, `bob`, `carol`); the step definition looks it up,
+gets the matching `CheckoutCustomer`, and uses it to fill the checkout form. That is the core of
+data-driven testing in Playwright + Cucumber.
+
+---
+
+# 6. Data tables — `cart-datatable.spec.ts`
+
+Step definitions in `src/cucumber/level-02-data-driven/steps/cart-datatable.spec.ts`.
+
+**Feature file:**
+
+```gherkin
+When I add following products to the cart:
+  | productId                    |
+  | tta-practice-backpack        |
+  | tta-bike-light               |
+  | test-allthethings-tshirt-red |
+```
+
+**Step definition:**
+
+```ts
+import { DataTable, When } from '@cucumber/cucumber';
+
+When(
+    'I add following products to the cart:',
+    async function (this: CustomWorld, dataTable: DataTable) {
+        const products = dataTable.hashes();
+
+        for (const product of products) {
+            await this.inventoryPage.addToCart(product.productId);
+        }
+    }
+);
+```
+
+## What `hashes()` returns
+
+The first table row becomes the keys; every following row becomes one object:
+
+```ts
+[
+    { productId: 'tta-practice-backpack' },
+    { productId: 'tta-bike-light' },
+    { productId: 'test-allthethings-tshirt-red' },
+]
+```
+
+So `product.productId` gives, one per loop iteration:
+
+```
+tta-practice-backpack
+tta-bike-light
+test-allthethings-tshirt-red
+```
