@@ -32,10 +32,7 @@ interface TokenResponse {
     token: string
 }
 
-interface BookingFlowState {
-    token?: string,
-    bookingId?: number
-}
+
 
 
 
@@ -72,35 +69,35 @@ test.describe('@P0 @regression Level 2 (ApiHelper) - PUT update booking', () => 
         },
         additionalneeds: 'dinner'
     };
+    let tokenResponse: TokenResponse;
+    let createBookingResponse: CreateBookingResponse;
 
-    const bookingFlowState: BookingFlowState = {};
     test('PUT /booking/{id} replaces the booking with a cookie token', async ({ request }, testInfo) => {
         const api = new ApiHelper(request);
 
         await test.step('Step 1: Create Token and retrive the token', async () => {
             const authResponse = await api.post('/auth', tokenPayload, { headers });
-            const { token } = await api.parseJsonResponse<{ token: string }>(authResponse);
-            expect(token).toBeTruthy();
-            bookingFlowState.token = token;
-            log.info(`Step 1: Token has been generated: ${bookingFlowState.token}`)
+            tokenResponse = await api.parseJsonResponse<TokenResponse>(authResponse);
+            expect(tokenResponse.token).toBeTruthy();
+            log.info(`Step 1: Token has been generated: ${tokenResponse.token}`)
         });
 
         await test.step(`Step 2: Create Booking with ${createbookingPayload.firstname} ${createbookingPayload.lastname} and retrive the Booking Id`, async () => {
             const response = await api.post('/booking', createbookingPayload, { headers });
-            const createBookingResponse = await api.parseJsonResponse<CreateBookingResponse>(response);
+            createBookingResponse = await api.parseJsonResponse<CreateBookingResponse>(response);
             expect(createBookingResponse.bookingid).toBeTruthy();
-            bookingFlowState.bookingId = createBookingResponse.bookingid;
+
             log.info(`Step 2.1: Booking created with id ${createBookingResponse.bookingid}`)
             log.info(`Step 2.2: Booking created with firstname ${createBookingResponse.booking.firstname}`)
             expect(createBookingResponse.booking.firstname).toBe(createbookingPayload.firstname);
-            log.info(`Step 2.3: Created the booking id ${bookingFlowState.bookingId} verified OK`);
+            log.info(`Step 2.3: Created the booking id ${createBookingResponse.bookingid} verified OK`);
         });
 
         let updatedBookingResponse: BookingPayload;
 
         await test.step(`Step 3: Update Booking with ${updatebookingPayload.firstname} ${updatebookingPayload.lastname}`, async () => {
-            const token = bookingFlowState.token;
-            const bookingId = bookingFlowState.bookingId;
+            const token = tokenResponse.token;
+            const bookingId = createBookingResponse.bookingid;
             log.info(`Step 3.1: Update /booking/{bookingid} for ${updatebookingPayload.firstname} ${updatebookingPayload.lastname}`)
             const response = await api.put(`/booking/${bookingId}`, updatebookingPayload,
                 {
@@ -126,12 +123,12 @@ test.describe('@P0 @regression Level 2 (ApiHelper) - PUT update booking', () => 
         });
 
         await test.step('Step 4: Verify the updated booking is echoed back', async () => {
-            log.info(`Step 4.1: verifying booking id ${bookingFlowState.bookingId} is updated with ${updatedBookingResponse.firstname} echoes the payload`);
+            log.info(`Step 4.1: verifying booking id ${createBookingResponse.bookingid} is updated with ${updatedBookingResponse.firstname} echoes the payload`);
             expect(updatedBookingResponse.firstname).toBe(updatebookingPayload.firstname);
             expect(updatedBookingResponse.lastname).toBe(updatebookingPayload.lastname)
             expect(updatedBookingResponse.additionalneeds).toBe(updatebookingPayload.additionalneeds);
             expect(updatedBookingResponse.bookingdates.checkin).toBe(updatebookingPayload.bookingdates.checkin);
-            log.info(`Step 4.2: Updated the booking id ${bookingFlowState.bookingId} verified OK`);
+            log.info(`Step 4.2: Updated the booking id ${createBookingResponse.bookingid} verified OK`);
         });
 
     });

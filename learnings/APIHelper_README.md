@@ -82,6 +82,28 @@ const helper = new APIHelper(request);
 // this.context = request
 ```
 
+Playwright's built-in `request` fixture is typed as `APIRequestContext`, so
+`new APIHelper(request)` passes an `APIRequestContext`.
+
+```ts
+test('api', async ({ request }) => {
+  const api = new APIHelper(request);   // request: APIRequestContext
+});
+```
+
+`APIHelper` accepts either of two types — `ApiContext = Page | APIRequestContext` —
+and `getRequest()` ends up with an `APIRequestContext` in both cases:
+
+| Passed in | `'request' in context` | What `getRequest()` returns |
+|---|---|---|
+| `page` (a `Page`) | `true` — `Page` has a `.request` property | `page.request`, an `APIRequestContext` |
+| `request` (an `APIRequestContext`) | `false` — no `.request` property | the context itself, cast to `APIRequestContext` |
+
+There is one small difference between the two:
+
+- **`page.request`** shares cookies with the browser. Use it when an API call must reuse a UI login session.
+- **`request` fixture** has its own separate cookie store. Use it for pure API tests.
+
 The conversion to a usable `APIRequestContext` happens later, on demand, inside a
 private method — commonly named `getRequest()` — every time a call is made:
 
