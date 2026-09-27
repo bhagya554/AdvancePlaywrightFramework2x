@@ -78,3 +78,15 @@ test.describe('@P0 @regression Level 2 (ApiHelper) - POST create booking', () =>
         })
     })
 })
+
+/*
+Run it using terminal:
+npm run test:api -- apiTests/02_restfulbooker_apiHelper/create-booking.spec.ts
+
+what is --?
+Anything after -- is added to the end of that command.
+So this:
+    npm run test:api -- apiTests/02_restfulbooker_apiHelper/create-booking.spec.ts
+becomes:
+    cross-env BASE_URL= TTA_ENV=api playwright test apiTests/02_restfulbooker_apiHelper/create-booking.spec.ts
+*/

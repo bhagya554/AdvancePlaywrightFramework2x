@@ -396,6 +396,219 @@ Result:
 
 If `...overrides` appeared first, Faker-generated values would overwrite custom test values.
 
+# Overrides Pattern - Deep Dive
+
+`overrides` is a very common pattern in test data builders.
+
+```ts
+export function buildBooking(
+  overrides: Partial<Booking> = {}
+): Booking
+```
+
+## 1. What is Partial<Booking>?
+
+Suppose the `Booking` interface looks like:
+
+```ts
+interface Booking {
+  firstname: string;
+  lastname: string;
+  totalprice: number;
+  depositpaid: boolean;
+  bookingdates: {
+    checkin: string;
+    checkout: string;
+  };
+  additionalneeds: string;
+}
+```
+
+Normally, if something expects a `Booking`, you must provide **all** properties:
+
+```ts
+const booking: Booking = {
+  firstname: 'John',
+  lastname: 'Smith',
+  totalprice: 500,
+  depositpaid: true,
+  bookingdates: {
+    checkin: '2026-01-01',
+    checkout: '2026-01-31',
+  },
+  additionalneeds: 'Breakfast',
+};
+```
+
+`Partial<Booking>` makes every property optional:
+
+```ts
+{
+  firstname?: string;
+  lastname?: string;
+  totalprice?: number;
+  depositpaid?: boolean;
+  bookingdates?: { ... };
+  additionalneeds?: string;
+}
+```
+
+So you pass only the fields you want to change.
+
+## 2. What is the default value {}?
+
+```ts
+overrides: Partial<Booking> = {}
+```
+
+If you call it with no argument:
+
+```ts
+buildBooking();
+```
+
+then:
+
+```ts
+overrides = {};  // an empty object
+```
+
+Spreading an empty object adds nothing, so every field stays Faker-generated.
+
+## 3. How is it used?
+
+`...overrides` is the **last** line of the returned object. The spread copies every property from `overrides` into the result, and since it comes last, it replaces any value already set.
+
+### Example 1: No overrides
+
+```ts
+const booking = buildBooking();
+```
+
+Possible output - everything from Faker:
+
+```ts
+{
+  firstname: "David",
+  lastname: "Miller",
+  totalprice: 450,
+  depositpaid: true,
+  bookingdates: {
+    checkin: "2026-02-01",
+    checkout: "2026-01-31"
+  },
+  additionalneeds: "Breakfast"
+}
+```
+
+### Example 2: Override firstname
+
+```ts
+const booking = buildBooking({
+  firstname: "Bhagya"
+});
+```
+
+Process:
+
+```ts
+{
+  firstname: faker.person.firstName(), // David
+  ...
+  ...{ firstname: "Bhagya" }
+}
+```
+
+Result - only `firstname` changes:
+
+```ts
+{
+  firstname: "Bhagya",
+  lastname: "Miller",
+  totalprice: 450,
+  ...
+}
+```
+
+### Example 3: Override multiple fields
+
+```ts
+const booking = buildBooking({
+  firstname: "Bhagya",
+  totalprice: 999,
+  depositpaid: true
+});
+```
+
+Output:
+
+```ts
+{
+  firstname: "Bhagya",
+  lastname: "Miller",
+  totalprice: 999,
+  depositpaid: true,
+  ...
+}
+```
+
+## Why use this in API testing?
+
+Imagine a booking payload requires 10 fields.
+
+Without a builder, every test writes all fields:
+
+```ts
+const payload = {
+  firstname: "Bhagya",
+  lastname: "Sahitya",
+  totalprice: 500,
+  ...
+};
+```
+
+With a builder, the test states only what it cares about:
+
+```ts
+const payload = buildBooking({
+  firstname: "Bhagya"
+});
+```
+
+The builder generates the rest. Tests become:
+
+- ✅ Shorter
+- ✅ Easier to read
+- ✅ Less maintenance
+
+## Real-world analogy
+
+Think of `buildBooking()` as a hotel booking form pre-filled with default values:
+
+```ts
+buildBooking();
+```
+
+```txt
+Name: David
+Price: 500
+Breakfast: Yes
+```
+
+Now:
+
+```ts
+buildBooking({
+  firstname: "Bhagya"
+});
+```
+
+is like saying:
+
+> "Create the standard booking, but replace the name with Bhagya."
+
+The `overrides` object contains only the values you want to replace in the default booking.
+
 # FAQ
 
 ## What does T00:00:00 mean?

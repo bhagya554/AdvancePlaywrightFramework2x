@@ -20,7 +20,7 @@ export function buildBooking(
     totalprice: faker.number.int({ min: 100, max: 1000 }),
     depositpaid: faker.datatype.boolean(),
     bookingdates: {
-      checkin: '2026-02-01',
+      checkin: '2026-01-01',
       checkout: isoDate(30),
     },
     additionalneeds: faker.helpers.arrayElement([

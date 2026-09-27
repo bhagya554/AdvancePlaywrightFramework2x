@@ -98,7 +98,7 @@ test.describe('@P0 @regression Level 2 (ApiHelper) - PUT update booking', () => 
         await test.step(`Step 3: Update Booking with ${updatebookingPayload.firstname} ${updatebookingPayload.lastname}`, async () => {
             const token = tokenResponse.token;
             const bookingId = createBookingResponse.bookingid;
-            log.info(`Step 3.1: Update /booking/{bookingid} for ${updatebookingPayload.firstname} ${updatebookingPayload.lastname}`)
+            log.info(`Step 3.1: Update /booking/${bookingId} for ${updatebookingPayload.firstname} ${updatebookingPayload.lastname}`)
             const response = await api.put(`/booking/${bookingId}`, updatebookingPayload,
                 {
                     headers:
@@ -134,3 +134,15 @@ test.describe('@P0 @regression Level 2 (ApiHelper) - PUT update booking', () => 
     });
 
 });
+
+/*
+Run it using terminal:
+npm run test:api -- apiTests/02_restfulbooker_apiHelper/update-booking.spec.ts
+
+what is --?
+Anything after -- is added to the end of that command.
+So this:
+    npm run test:api -- apiTests/02_restfulbooker_apiHelper/create-booking.spec.ts
+becomes:
+    cross-env BASE_URL= TTA_ENV=api playwright test apiTests/02_restfulbooker_apiHelper/create-booking.spec.ts
+*/
