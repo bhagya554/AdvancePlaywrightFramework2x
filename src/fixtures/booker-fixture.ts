@@ -7,8 +7,8 @@ export type BookerFixtures = {
 }
 
 export const test = base.extend<BookerFixtures>({
-    bookingApi: async ({ request }, use) => {
-        await use(new BookingApi(request))
+    bookingApi: async ({ request, baseURL }, use) => {
+        await use(new BookingApi(request, baseURL))
     },
     bookerToken: async ({ bookingApi }, use) => {
         const token = await bookingApi.getAuthToken();

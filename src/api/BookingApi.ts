@@ -161,7 +161,7 @@ export class BookingApi {
     async deleteBooking(bookingId:number,token:string):Promise<Number>{
         const response=await this.deleteBookingResponse(bookingId,token)
         if(!this.apiHelper.isSuccess(response)){
-            throw new Error(`[BookingApi] PATCH /booking/${bookingId} failed: ${response.status()}`)
+            throw new Error(`[BookingApi] DELETE /booking/${bookingId} failed: ${response.status()}`)
         }
 
         return response.status();
