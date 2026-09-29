@@ -75,16 +75,18 @@ AdvancedFramework_2x/
 │   ├── testdata/
 │   │   ├── logintestdata.json          # TTACart personas + documented quirks
 │   │   ├── checkouttestdata.json       # Checkout-flow fixtures
-│   │   └── api-booking-data.ts         # restful-booker request/response fixtures
+│   │   ├── api-booking-data.ts         # restful-booker request/response fixtures
+│   │   └── schemas/                    # JSON schemas for AJV (create-booking.schema.json)
 │   ├── tests/                      # Spec files (testDir)
 │   │   ├── login/                      # Login.spec.ts, login-data-driven.spec.ts
 │   │   ├── e2e/                        # e2e-checkout_1..4 (fixtures, data-driven, env-driven)
-│   │   └── apiTests/                   # 01_restfulbooker_raw .. 04_jsonpath_plus
+│   │   └── apiTests/                   # 01_restfulbooker_raw .. 05_ajv_json_schema
 │   └── utils/
 │       ├── UtilElementLocators.ts  # Logged wrappers over Playwright actions
 │       ├── logger.ts               # Winston root + scoped child loggers
 │       ├── DataGenerator.ts        # Faker-backed test data
 │       ├── APIHelper.ts            # Generic HTTP verb wrapper + retry
+│       ├── SchemaValidator.ts      # AJV validateSchema() — reusable JSON schema check
 │       ├── visualStep.ts           # test.step + optional per-step screenshot
 │       ├── CustomReporter.ts       # Custom live HTML reporter (registered in config)
 │       └── howToUseLogger.md       # Logger usage notes
@@ -200,6 +202,7 @@ Drop-in replacement for `test.step` that also attaches a step screenshot when `A
 - `ApiHelper` ([src/utils/APIHelper.ts](src/utils/APIHelper.ts)) — generic `GET/POST/PUT/PATCH/DELETE` wrapper over `APIRequestContext`, plus `callApiWithRetry()` for polling and `isSuccess()`/`isFailureClient()` status helpers.
 - `BookingApi` ([src/api/BookingApi.ts](src/api/BookingApi.ts)) — typed client for restful-booker (auth token, CRUD on bookings).
 - `booker-fixture.ts` ([src/fixtures/booker-fixture.ts](src/fixtures/booker-fixture.ts)) — extends `test` with `bookingApi` and `bookerToken` fixtures for API specs.
+- `SchemaValidator` ([src/utils/SchemaValidator.ts](src/utils/SchemaValidator.ts)) — `validateSchema(schema, data)` over a shared AJV instance (with `ajv-formats`). Returns readable error strings; empty array = valid, so specs assert `expect(validateSchema(schema, body)).toEqual([])`. Schemas live in [src/testdata/schemas/](src/testdata/schemas/). Walkthrough: [learnings/2026-09-28-ajv-json-schema-validation.md](learnings/2026-09-28-ajv-json-schema-validation.md).
 
 ### `CustomReporter` — [src/utils/CustomReporter.ts](src/utils/CustomReporter.ts)
 
@@ -326,7 +329,10 @@ Pass extra Playwright arguments after `--`:
 npm test -- src/tests/e2e/e2e-checkout_1.spec.ts   # single spec
 npm test -- -g "@P0"                               # filter by title / tag
 npm test -- --workers=1                            # force serial execution
+npm test -- src/tests/e2e --workers=4              # parallel with 4 workers
 ```
+
+Tests run in parallel by default: `fullyParallel: true` and `workers` unset (Playwright default = 50% of logical CPU cores). The first output line (`Running N tests using X workers`) shows what a run used. On an 8-core machine the 11 e2e tests take ~42s with `--workers=1` and ~19s with `--workers=4`. Full explanation: [learnings/2026-09-29-running-e2e-tests-in-parallel.md](learnings/2026-09-29-running-e2e-tests-in-parallel.md).
 
 ### Current suites
 
@@ -341,7 +347,9 @@ npm test -- --workers=1                            # force serial execution
 | `src/tests/apiTests/01_restfulbooker_raw/*` | restful-booker via raw `request` context (ping, POST, new context, PUT, full CRUD) |
 | `src/tests/apiTests/02_restfulbooker_apiHelper/*` | Same API, routed through `ApiHelper` |
 | `src/tests/apiTests/03_restfulbooker_fixture_e2e_api/*` | Same API, routed through `booker-fixture` (`bookingApi`/`bookerToken`) |
+| `src/tests/apiTests/03_restfulbooker_fixture_e2e_api/booking-crud-e2e-fixtures-ponytailReviewed.spec.ts` | Same CRUD lifecycle as `booking-crud-e2e-fixtures.spec.ts`, trimmed after a ponytail (over-engineering) review — whole-object `toEqual`, no redundant logs/attachments |
 | `src/tests/apiTests/04_jsonpath_plus/jsonpath-queries.e2e.spec.ts` | `jsonpath-plus` queries over API responses |
+| `src/tests/apiTests/05_ajv_json_schema/create-booking-json-schema.spec.ts` | AJV JSON schema validation of `POST /booking` response + a negative test proving the schema rejects bad data |
 
 Two import styles coexist: `e2e-checkout_1.spec.ts` uses the fixture base (`@fixtures/test-base`); `Login.spec.ts` still does raw `@playwright/test` + manual construction. Prefer the fixture style for new specs.
 
